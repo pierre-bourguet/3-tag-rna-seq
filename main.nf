@@ -37,22 +37,21 @@ process write_info {
      memory '1 GB'
      time '1h'
 
-     publishDir "${params.outdir}/${sample_name}", mode: 'copy'
+	publishDir "${params.outdir}/${sample_name}", mode: 'copy'
 
      input:
      tuple file(filename), val(sample_name)
 
      output:
-     file("info.txt")
-     file("raw_reads.length")
+	file("${sample_name}_raw_read_counts.txt") 
 
      script:
      """
-     echo "${sample_name}" > info.txt
-     echo "$filename" >> info.txt
-     zcat $filename | wc -l | awk '{printf "%d\\n", \$1 / 4}' > raw_reads.length
+	read_count=\$(zcat $filename | wc -l | awk '{printf "%d\\n", \$1 / 4}')
+	echo -e "${sample_name}\t\$read_count" >> ${sample_name}_raw_read_counts.txt
      """
 }
+
 
 process trim_tagseq {
 	executor 'slurm'
@@ -68,20 +67,22 @@ process trim_tagseq {
 
 	output:
 	val(sample_name)
-        file("fastp_output.fastq")
-        file("fastp_output.html")
-        file("fastp_output.json")
-        file("fastp_output.log")
-        file("fastp_output.length")
-        file("fastp_fixed.fastq")
+        file("${sample_name}_fastp_output.fastq")
+        file("${sample_name}_fastp_output.html")
+        file("${sample_name}_fastp_output.json")
+        file("${sample_name}_fastp_output.log")
+        file("${sample_name}_trimmed_read_counts.txt")
+        file("${sample_name}_fastp_fixed.fastq")
 
 	script:
 	"""
-	fastp -i $filename -o fastp_fixed.fastq --max_len1 50  2> fastp_fixed.log
-     fastp -i fastp_fixed.fastq -o fastp_output.fastq --trim_poly_x -h fastp_output.html -j fastp_output.json --max_len1 70  2> fastp_output.log
-     cat fastp_output.fastq | wc -l | awk '{printf "%d\\n", \$1 / 4}' > fastp_output.length
+	fastp -i $filename -o "${sample_name}_fastp_fixed.fastq" --max_len1 50  2> "${sample_name}_fastp_fixed.log"
+	fastp -i "${sample_name}_fastp_fixed.fastq" -o "${sample_name}_fastp_output.fastq" --trim_poly_x -h "${sample_name}_fastp_output.html" -j "${sample_name}_fastp_output.json" --max_len1 70  2> "${sample_name}_fastp_output.log"
+	trimmed=\$(cat "${sample_name}_fastp_output.fastq" | wc -l | awk '{printf "%d\\n", \$1 / 4}')
+	echo -e "${sample_name}\t\$trimmed" >> "${sample_name}_trimmed_read_counts.txt"
 	"""
 }
+
 
 process clean_umi_duplicates {
 	executor 'slurm'
@@ -98,49 +99,73 @@ process clean_umi_duplicates {
 	file(filename)
 
 	output:
-	tuple val(sample_name), file("umi_dedup_remove_umi.fastq")
-	file("triple_umi_in_R1.fastq")
-     file("umi_dedup.fastq")
-     file("umi_dedup.log")
-     file("umi_dedup.stats")
-     file("umi_dedup_remove_umi.length")
+	tuple val(sample_name), file("${sample_name}_umi_dedup_remove_umi.fastq")
+	file("${sample_name}_triple_umi_in_R1.fastq")
+	file("${sample_name}_umi_dedup.fastq")
+	file("${sample_name}_umi_dedup.log") 
+	file("${sample_name}_umi_dedup.stats")
+	file("${sample_name}_umi_dedup_removed_read_counts.txt")
 
 	// This is done as preparation for the cleaning of the UMI using clumpify.sh
 	// As clumpify allow up to two missmatch any difference in the UMI will indicate different instances of a read
 
 	script:
 	"""
-	cat $filename | awk 'BEGIN {UMI = ""; q="IIIIIIII"} {r_n = (NR%4); if(r_n == 1) {UMI = substr(\$1,length(\$1)-7,length(\$1)); print;}; if(r_n==2) {printf "%s%s%s%s\\n", UMI, UMI, UMI, \$1}; if(r_n==3) {print}; if(r_n==0) {printf "%s%s%s%s\\n", q,q,q,\$1}}' > triple_umi_in_R1.fastq
+	cat $filename | awk 'BEGIN {UMI = ""; q="IIIIIIII"} {r_n = (NR%4); if(r_n == 1) {UMI = substr(\$1,length(\$1)-7,length(\$1)); print;}; if(r_n==2) {printf "%s%s%s%s\\n", UMI, UMI, UMI, \$1}; if(r_n==3) {print}; if(r_n==0) {printf "%s%s%s%s\\n", q,q,q,\$1}}' > ${sample_name}_triple_umi_in_R1.fastq
 
-     clumpify.sh in=triple_umi_in_R1.fastq out=umi_dedup.fastq dedupe addcount 2> umi_dedup.log
+     clumpify.sh in=${sample_name}_triple_umi_in_R1.fastq out=${sample_name}_umi_dedup.fastq dedupe addcount 2> ${sample_name}_umi_dedup.log
 
-     cat umi_dedup.fastq | awk '(NR % 4) == 1' | grep copies | awk '{print substr(\$NF,8,100)}' | sort -nk1 | uniq -c | sort -nk2 > umi_dedup.stats
-     cat umi_dedup.fastq | wc -l | awk '{printf "%d\\n", \$1 / 4}' > umi_dedup.length
+     cat ${sample_name}_umi_dedup.fastq | awk '(NR % 4) == 1' | grep copies | awk '{print substr(\$NF,8,100)}' | sort -nk1 | uniq -c | sort -nk2 > ${sample_name}_umi_dedup.stats
+     cat ${sample_name}_umi_dedup.fastq | wc -l | awk '{printf "%d\\n", \$1 / 4}' > ${sample_name}_umi_dedup.length
 
-     cat umi_dedup.fastq | awk '{if((NR%2)==1) {print} else {printf "%s\\n", substr(\$1,25,length(\$1))}}' > umi_dedup_remove_umi.fastq
-     cat umi_dedup_remove_umi.fastq | wc -l | awk '{printf "%d\\n", \$1 / 4}' > umi_dedup_remove_umi.length
+     cat ${sample_name}_umi_dedup.fastq | awk '{if((NR%2)==1) {print} else {printf "%s\\n", substr(\$1,25,length(\$1))}}' > ${sample_name}_umi_dedup_remove_umi.fastq
+     umi_removed=\$(cat ${sample_name}_umi_dedup_remove_umi.fastq | wc -l | awk '{printf "%d\\n", \$1 / 4}') 
+	echo -e "${sample_name}\t\$umi_removed" >> "${sample_name}_umi_dedup_removed_read_counts.txt"
+
 	"""
 }
 
+process combine_raw_counts
+{
+	publishDir "${params.outdir}", mode: 'copy'
+
+	input:
+	file(counts)
+	file(trimmed_file)
+	file(umi_removed)
+
+	output:
+	file ("all_raw_read_counts.txt")
+	file ("all_trimmed_read_counts.txt")
+	file ("all_umi_collapsed_read_counts.txt")
+
+	script:
+	'''
+	cat *_raw_read_counts.txt >> "all_raw_read_counts.txt"
+	cat *_trimmed_read_counts.txt >> "all_trimmed_read_counts.txt"
+	cat *_umi_dedup_removed_read_counts.txt >> "all_umi_collapsed_read_counts.txt"
+	'''
+}
+
 process fastqc {
-     executor 'slurm'
+	executor 'slurm'
 	cpus 8
 	memory '64 GB'
 	time '4h'
-     module 'fastqc/0.11.9-java-11'
+	module 'fastqc/0.11.9-java-11'
 
-     publishDir "${params.outdir}/${sample_name}", mode: 'copy', pattern: '*.{zip,html,txt}'
+	publishDir "${params.outdir}/${sample_name}", mode: 'copy', pattern: '*.{zip,html,txt}'
 
-     input:
-     tuple val(sample_name), file(filename)
+	input:
+	tuple val(sample_name), file(filename)
 
-     output:
-     file "*.{zip,html,txt}"
+	output:
+	file "*.{zip,html,txt}"
 
-     script:
-     """
-     fastqc ${filename}
-     """
+	script:
+	"""
+	fastqc ${filename}
+	"""
 }
 
 process bowtie2_alignment {
@@ -192,7 +217,7 @@ process create_salmon_index
 
      cat cdna.fa TEs.fa > concatenated_fasta.fa
 
-     salmon index -t concatenated_fasta.fa -i ${params.outdir}/salmon_index
+     salmon index -t concatenated_fasta.fa -i .
      """
 }
 
@@ -223,7 +248,7 @@ process quantify_exp {
 
 workflow {
 //Writing the raw read counts in the metadata
-     write_info(samples)
+	raw_counts = write_info(samples)
 //Pulling the bowtie2 AT genome index for bowtie2 alignment
      bw2index = pull_genome_index(params.index)
 //Downloading cdna and te files from TAIR10 from these links
@@ -234,8 +259,9 @@ workflow {
 //Trimming poly
      trimmed_samples = trim_tagseq(samples)
 	umi_cleaned = clean_umi_duplicates(trimmed_samples[0], trimmed_samples[1])
+	combine_raw_counts(raw_counts.collect(), trimmed_samples[5].collect(), umi_cleaned[5].collect())
      fastqc(umi_cleaned[0])
-	bowtie2_alignment(umi_cleaned[0], bw2index)
+	//bowtie2_alignment(umi_cleaned[0], bw2index)
 
 
      quantify_exp(umi_cleaned[0], salmon_index[1])
