@@ -6,6 +6,10 @@ samples = Channel.fromPath(params.sample_list)
                .splitCsv(sep:'\t')
                .map { it -> [file(it[0]), it[1]] }
 
+rscript = Channel.fromPath(params.rscript)
+
+params.levels=0
+
 //Pulling the AT bowtie2 index from singularity container
 if(params.reference_genome == "tair10")
 {
@@ -127,6 +131,11 @@ process clean_umi_duplicates {
 
 process combine_raw_counts
 {
+	executor 'slurm'
+        cpus 1
+        memory '4 GB'
+        time '1h'
+
 	publishDir "${params.outdir}", mode: 'copy'
 
 	input:
@@ -145,6 +154,32 @@ process combine_raw_counts
 	cat *_trimmed_read_counts.txt >> "all_trimmed_read_counts.txt"
 	cat *_umi_dedup_removed_read_counts.txt >> "all_umi_collapsed_read_counts.txt"
 	'''
+}
+
+process Summarize_read_counts
+{
+	executor 'slurm'
+	cpus 4
+	memory '64 GB'
+	time '1h'
+	module 'build-env/f2022:r/4.2.0-foss-2021b'
+	
+	publishDir "${params.outdir}/Read_counts_summarized/", mode: 'copy'
+
+	input:
+	file(rscript)
+	file(raw)
+	file(trimmed)
+	file(umi_removed)
+
+	output:
+	file("all_read_counts_summarized.txt")
+	file("all_read_counts_summarized.pdf")
+
+	script:
+	"""
+	Rscript ${rscript} $raw $trimmed $umi_removed ${params.levels}
+	"""
 }
 
 process fastqc {
@@ -250,19 +285,18 @@ workflow {
 //Writing the raw read counts in the metadata
 	raw_counts = write_info(samples)
 //Pulling the bowtie2 AT genome index for bowtie2 alignment
-     bw2index = pull_genome_index(params.index)
+	bw2index = pull_genome_index(params.index)
 //Downloading cdna and te files from TAIR10 from these links
-     params.cdna_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_blastsets/TAIR10_cdna_20110103_representative_gene_model_updated"
-     params.tes_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_transposable_elements/TAIR10_TE.fas"
+	params.cdna_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_blastsets/TAIR10_cdna_20110103_representative_gene_model_updated"
+	params.tes_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_transposable_elements/TAIR10_TE.fas"
 //Creating the salmon index from the downloaded (concatenated) files
-     salmon_index = create_salmon_index(params.cdna_url, params.tes_url)
+	salmon_index = create_salmon_index(params.cdna_url, params.tes_url)
 //Trimming poly
-     trimmed_samples = trim_tagseq(samples)
+	trimmed_samples = trim_tagseq(samples)
 	umi_cleaned = clean_umi_duplicates(trimmed_samples[0], trimmed_samples[1])
-	combine_raw_counts(raw_counts.collect(), trimmed_samples[5].collect(), umi_cleaned[5].collect())
-     fastqc(umi_cleaned[0])
+	read_counts = combine_raw_counts(raw_counts.collect(), trimmed_samples[5].collect(), umi_cleaned[5].collect())
+	Summarize_read_counts(rscript, read_counts)
+	fastqc(umi_cleaned[0])
 	//bowtie2_alignment(umi_cleaned[0], bw2index)
-
-
-     quantify_exp(umi_cleaned[0], salmon_index[1])
+	quantify_exp(umi_cleaned[0], salmon_index[1])
 }
