@@ -1,13 +1,18 @@
 #!/usr/bin/env nextflow
 
+//Channel created from input file and mapping of file name and path
 samples = Channel.fromPath(params.sample_list)
                .splitText()
                .map { it.replaceFirst(/\n/,'') }
                .splitCsv(sep:'\t')
                .map { it -> [file(it[0]), it[1]] }
 
+//Channel for the R script to plot the read count summary in R
+params.rscript = file("${baseDir}/Summarize_read_counts.R")
 rscript = Channel.fromPath(params.rscript)
 
+//This should remain 0 for anyone other than me using the pipeline
+//levels=1 just adopts a x axis ordering custom difined only for my data
 params.levels=0
 
 //Pulling the AT bowtie2 index from singularity container
@@ -16,9 +21,10 @@ if(params.reference_genome == "tair10")
 params.index="library://elin.axelsson/index/index_bowtie2_tair10:v2.4.1-release-47"
 }
 
-//Basic parameter check
+//Checking if genome index is obtained or not
 if ( !params.index ) exit 1, "Error: no Bowtie2 index"
 
+//This process pulls the bowtie2 genome index from singularity
 process pull_genome_index
 {
      executor 'slurm'
@@ -35,6 +41,7 @@ process pull_genome_index
      """
 }
 
+//This process counts the no. of reads in the raw files for each sample 
 process write_info {
      executor 'slurm'
      cpus 1
@@ -56,7 +63,7 @@ process write_info {
      """
 }
 
-
+//This process trims the read to 50 bp, removes the poly_x and counts the no. of reads after trimming
 process trim_tagseq {
 	executor 'slurm'
 	cpus 2
@@ -87,7 +94,7 @@ process trim_tagseq {
 	"""
 }
 
-
+//After trimming, this process removes the UMIs and counts the read counts again
 process clean_umi_duplicates {
 	executor 'slurm'
 	cpus 2
@@ -129,6 +136,7 @@ process clean_umi_duplicates {
 	"""
 }
 
+//This process collects all text files of read counts after every step
 process combine_raw_counts
 {
 	executor 'slurm'
@@ -156,6 +164,7 @@ process combine_raw_counts
 	'''
 }
 
+//This process summarizes the read counts by merging all files from process above and plotting bar plots by calling the Rscript 
 process Summarize_read_counts
 {
 	executor 'slurm'
@@ -178,10 +187,17 @@ process Summarize_read_counts
 
 	script:
 	"""
+	#Check if the Rscript exists
+	if [ ! -f "${rscript}" ]; then
+		echo "Error: Rscript- Summarize_read_counts.R '${rscript}' not found. Make sure that the file is in ${baseDir} or provide the path for Rscript using --rscript "
+		exit 1
+	fi
+
 	Rscript ${rscript} $raw $trimmed $umi_removed ${params.levels}
 	"""
 }
 
+//This process generates the fastqc reports for all files after UMI removal
 process fastqc {
 	executor 'slurm'
 	cpus 8
@@ -203,6 +219,7 @@ process fastqc {
 	"""
 }
 
+//This process performs the bowtie2 genome alignment to generate the alignment rates per sample
 process bowtie2_alignment {
 	executor 'slurm'
 	cpus 8
@@ -227,6 +244,7 @@ process bowtie2_alignment {
 	"""
 }
 
+//This process generates a salmon index by downloading the cdna.fa and te.fa files from tair10 and merging them into one
 process create_salmon_index
 {
      executor 'slurm'
@@ -256,20 +274,19 @@ process create_salmon_index
      """
 }
 
-
-
+//This process quantifies expression using the salmon index created above
 process quantify_exp {
 	executor 'slurm'
-     cpus 4
-     memory '10 GB'
-     time '1h'
-     module 'build-env/f2021:salmon/1.5.2-gompi-2020b'
+	cpus 4
+	memory '10 GB'
+	time '1h'
+	module 'build-env/f2021:salmon/1.5.2-gompi-2020b'
 
-     publishDir "${params.outdir}/${sample_name}", mode: 'copy', pattern: 'quant*'
+	publishDir "${params.outdir}/${sample_name}", mode: 'copy', pattern: 'quant*'
 
-     input:
-     tuple val(sample_name), file(filename)
-     val index
+	input:
+	tuple val(sample_name), file(filename)
+	val index
 
 	output:
 	file("quant*")
@@ -282,21 +299,38 @@ process quantify_exp {
 
 
 workflow {
-//Writing the raw read counts in the metadata
+
+	//Writing the raw read counts in the metadata
 	raw_counts = write_info(samples)
-//Pulling the bowtie2 AT genome index for bowtie2 alignment
+
+	//Pulling the bowtie2 AT genome index for bowtie2 alignment
 	bw2index = pull_genome_index(params.index)
-//Downloading cdna and te files from TAIR10 from these links
+
+	//Default links of files to be downloaded from TAIR10. 
 	params.cdna_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_blastsets/TAIR10_cdna_20110103_representative_gene_model_updated"
 	params.tes_url = "https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_transposable_elements/TAIR10_TE.fas"
-//Creating the salmon index from the downloaded (concatenated) files
+
+	//Creating the salmon index from the downloaded (concatenated) files
 	salmon_index = create_salmon_index(params.cdna_url, params.tes_url)
-//Trimming poly
+	
+	//Trimming and removing poly_x
 	trimmed_samples = trim_tagseq(samples)
+	
+	//UMI removal
 	umi_cleaned = clean_umi_duplicates(trimmed_samples[0], trimmed_samples[1])
+	
+	//Collecting all read counts
 	read_counts = combine_raw_counts(raw_counts.collect(), trimmed_samples[5].collect(), umi_cleaned[5].collect())
+	
+	//Plotting the read count summary in R
 	Summarize_read_counts(rscript, read_counts)
+	
+	//Generate fastqc reports
 	fastqc(umi_cleaned[0])
+	
+	//Bowtie2 alignment to the genome to get alignment rates
 	//bowtie2_alignment(umi_cleaned[0], bw2index)
+
+	//Quantify gene expression using salmon	
 	quantify_exp(umi_cleaned[0], salmon_index[1])
 }
