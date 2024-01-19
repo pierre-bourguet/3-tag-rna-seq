@@ -13,12 +13,18 @@ trimmed_counts <- commandArgs(trailingOnly = TRUE)[2]
 umi_removed_counts <- commandArgs(trailingOnly = TRUE)[3]
 xaxis_order <- commandArgs(trailingOnly = TRUE)[4]
 
-raw_rc <- read_tsv(raw_counts, col_names = c("Sample","Reads")) %>% 
-  mutate(Sample = str_sub(Sample, end=-13))
-fastp_trimmed_rc <- read_tsv(trimmed_counts, col_names = c("Sample","Reads")) %>% 
-  mutate(Sample = str_sub(Sample, end=-13))
-umi_collapsed_rc <- read_tsv(umi_removed_counts, col_names = c("Sample","Reads")) %>% 
-  mutate(Sample = str_sub(Sample, end=-13))
+if (xaxis_order == 1){
+	raw_rc <- read_tsv(raw_counts, col_names = c("Sample","Reads")) %>% 
+		mutate(Sample = str_sub(Sample, end=-13))
+	fastp_trimmed_rc <- read_tsv(trimmed_counts, col_names = c("Sample","Reads")) %>% 
+  		mutate(Sample = str_sub(Sample, end=-13))
+	umi_collapsed_rc <- read_tsv(umi_removed_counts, col_names = c("Sample","Reads")) %>% 
+		mutate(Sample = str_sub(Sample, end=-13))
+} else {
+	raw_rc <- read_tsv(raw_counts, col_names = c("Sample","Reads"))
+        fastp_trimmed_rc <- read_tsv(trimmed_counts, col_names = c("Sample","Reads")) 
+        umi_collapsed_rc <- read_tsv(umi_removed_counts, col_names = c("Sample","Reads"))
+}
 
 all_rc <- raw_rc %>% left_join(fastp_trimmed_rc, by="Sample") %>% 
   left_join(umi_collapsed_rc, by="Sample") %>% 
