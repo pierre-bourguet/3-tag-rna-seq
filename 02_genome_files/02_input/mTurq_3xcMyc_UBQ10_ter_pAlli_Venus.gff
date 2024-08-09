@@ -1,0 +1,14 @@
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	chromosome	1	3147	.	.	.	ID=mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus;Name=mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	gene	1	1505	.	+	.	ID=mTurq_3xcMyc;Note=protein_coding_gene;Name=mTurq_3xcMyc
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	mRNA	1	1505	.	+	.	ID=mTurq_3xcMyc.1;Parent=mTurq_3xcMyc;Name=mTurq_3xcMyc.1;Index=1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	protein	1	873	.	+	.	ID=mTurq_3xcMyc.1-Protein;Name=mTurq_3xcMyc.1;Derives_from=mTurq_3xcMyc.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	exon	1	1505	.	+	.	Parent=mTurq_3xcMyc.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	CDS	1	873	.	+	0	Parent=mTurq_3xcMyc.1,mTurq_3xcMyc.1-Protein;
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	three_prime_UTR	874	1505	.	+	.	Parent=mTurq_3xcMyc.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	gene	1510	3148	.	+	.	ID=pAlli_Venus;Name=pAlli_Venus;Note=protein_coding_gene
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	mRNA	1510	3148	.	+	.	ID=pAlli_Venus.1;Parent=pAlli_Venus;Name=pAlli_Venus.1;Index=1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	protein	2001	2720	.	+	.	ID=pAlli_Venus.1-Protein;Name=pAlli_Venus.1;Derives_from=pAlli_Venus.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	exon	1510	3148	.	+	.	Parent=pAlli_Venus.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	five_prime_UTR	1510	2000	.	+	.	Parent=pAlli_Venus.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	CDS	2001	2720	.	+	0	Parent=pAlli_Venus.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	three_prime_UTR	2721	3148	.	+	.	Parent=pAlli_Venus.1
