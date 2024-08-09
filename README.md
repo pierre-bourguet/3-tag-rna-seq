@@ -6,7 +6,7 @@ In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:
 http://UPDATELINKLATER
 
 The pipeline does the following:
-- trim in 3' to remove adapters, polyA, low quality base calls
+- trim reads in 3' to remove adapters, polyA, low quality base calls
 - collapse duplicates based on 8-bp UMIs (no UMI mismatch allowed, two mismatches allowed in the transcript)
 - randomly subsample to a given number of reads (default: 10 millions)
 - create indexes based on provided genome files
