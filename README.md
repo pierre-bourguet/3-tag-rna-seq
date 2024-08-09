@@ -44,7 +44,7 @@ sbatch 01.0_post_processing.sbatch ../../04_output/test13
 ```
 
 ## DESeq2
-One can control outliers to remove after a first analysis (e.g. : samples with low read counts). One can also test the influence of different samples on the DESeq2 outcome by excluding samples based on string patterns. One can control the type of annotations analyzed by modifying the DESeq2 environment file, where default includes protein-coding genes and transposable elements.
+A standard analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or even exclude all samples matching a string pattern, to test the influence of some samples on the DESeq2 outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
 
 - Prepare a DESeq2 sample_list file to describe your experiment design. Examples in:
 ```
