@@ -37,7 +37,7 @@ sample=test13
 nextflow run 01_script/nextflow/main_AtRTD3_ATTE_STAR_mapping_salmon_counts.nf --sample_list 03_sample_lists/sample_list_tagseq_03_sandbox.tsv --outdir 04_output/"$sample" -profile cbe -w "$SCRATCHDIR"/nf_tmp_"$sample" --max_n_read 5000000
 ```
 
-- Run post processing steps to aggregate read counts, plot quality metrics and run MultiQC. Commands are found in 01_script/post_processing/00_post_processing.sh. Example:
+- Run post processing steps to aggregate read counts, plot quality metrics and run MultiQC. Example:
 ```
 cd 01_script/post_processing/
 sbatch 01.0_post_processing.sbatch ../../04_output/test13
@@ -57,12 +57,23 @@ vi 01_script/post_processing/02.2_DESeq2_environment.R
 - Run a DESeq2 analysis. It runs DESeq2, normalizes and transforms counts, plots a PCA and a sample correlation heatmap, writes count tables, identifies differentially expressed genes (DEGs) for all treatment versus control comparisons and write tables, plots heatmaps of normalized & transformed counts at DEGs, write barplots of the number of DEGs per sample. It finally saves the environment and creates a script in "07_analysis" where you can start you own analysis.
 The order of arguments are: 
 ```
-sbatch 02.0_DESeq2.sbatch output_directory outliers outlier_pattern sample_list_file sample_DESeq2_file control_condition
+sbatch 02.0_DESeq2.sbatch output_directory \
+    outliers \
+    outlier_pattern \
+    sample_list_file \
+    sample_DESeq2_file \
+    control_condition
 ```
 Example:
 ```
-sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE/02_counts/" "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4" "none" "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv" "../../03_sample_lists/DESeq2_tagseq_03_cdca7.tsv" "WT"
+sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE/02_counts/" \
+    "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4" \
+    "none" \
+    "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv" \
+    "../../03_sample_lists/DESeq2_tagseq_03_cdca7.tsv" \
+    "WT"
 ```
+
 # Contributions
 Yoav Voichek developed the original pipeline. Vikas Shukla further improved it and put it on github. I created a fork from Vikas's pipeline. The main modifications I did are the following:
 - reference transcriptome changed from TAIR10 to AtRTD3
