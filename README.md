@@ -24,9 +24,9 @@ cd 02_genome_files/01_script/
 ./prepare_genome_files.sh
 ./gene_annotations_for_deseq2.sh
 ```
-The script is not perfectly wrapped, you have to execute each block in an interactive session and make sure everything goes well, but you have to do this only once. If TAIR blocks your wget queries, you can download files from a web browser.
+The scripts are not perfectly wrapped, you have to execute each block in an interactive session and make sure everything goes well, but you have to do this only once. If TAIR blocks your wget queries, you can download files from a web browser.
 
-## Mapping
+## Mapping and counting reads
 - Prepare a sample_list file. Examples in:
 02_sample_lists/
 
@@ -72,7 +72,7 @@ Yoav Voichek developed the original pipeline. Vikas Shukla further improved it a
 - count reads in sense and antisense
 - output stranded and unstranded bigwig files
 - created an alternative version of the genome files to include a transgenic construct
-- incorporated a DESeq2 downstream analysis
+- incorporated the DESeq2 downstream analysis
 
 I also added a post processing step which generates:
 - files with aggregated counts
