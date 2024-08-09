@@ -3,6 +3,16 @@
 This pipeline is meant to analyze short-read transcriptome libraries built with a custom protocol established by Yoav Voichek and Pieter Clauw in the Nordborg lab.
 In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:cDNA duplexes are cleaved by Tn5, PCR amplifies the 3' ends of transcripts and adds Illumina adapters for sequencing. Further details of the library construction protocol can be found here:
 
+The pipeline does the following:
+- trim adapters, polyA, low quality base calls
+- collapses duplicates based on UMIs (no UMI mismatch allowed, 2 transcript mismatches allowed)
+- randomly subsample to a given number of reads (default: 10 millions)
+- map with STAR
+- output stranded and unstranded bigwig files
+- quantify sense and antisense reads with Salmon in alignment-mode
+- generate plots to inspect quality metrics: multiplexing, trimming, duplicates, multiQC, sample to sample correlation
+- analyze relative to a control condition with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
+
 # Usage
 ## Mapping
 - Prepare a sample_list file. Examples in:
@@ -48,6 +58,7 @@ Yoav Voichek developed the original pipeline. Vikas Shukla further improved it a
 - incorporated read downsampling from Yoav's original code
 - map with STAR and count reads with salmon in alignment mode, instead of salmon pseudoalignment
 - count reads in sense and antisense
+- output stranded and unstranded bigwig files
 - created an alternative version of the genome files to include a transgenic construct
 - incorporated a DESeq2 downstream analysis
 
