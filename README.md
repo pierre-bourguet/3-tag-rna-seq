@@ -30,7 +30,7 @@ The scripts are not perfectly wrapped, you have to execute each block in an inte
 - Prepare a sample_list file. Examples in:
 02_sample_lists/
 
-- Run the main script from the 01_script/nextflow/ folder. Commands are found in 01_script/running_nextflow.sh. Example:
+- Run the main script. Commands are found in 01_script/running_nextflow.sh. Example:
 ```
 sample=test13
 nextflow run 01_script/nextflow/main_AtRTD3_ATTE_STAR_mapping_salmon_counts.nf --sample_list 03_sample_lists/sample_list_tagseq_03_sandbox.tsv --outdir 04_output/"$sample" -profile cbe -w "$SCRATCHDIR"/nf_tmp_"$sample" --reference_genome tair10 -resume
