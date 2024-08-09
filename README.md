@@ -27,14 +27,14 @@ cd 02_genome_files/01_script/
 The scripts are not perfectly wrapped, you have to execute each block in an interactive session and make sure everything goes well, but you have to do this only once. If TAIR blocks your wget queries, you can download files from a web browser.
 
 ## Mapping and counting reads
-- Prepare a sample_list file. Examples in:
+- Prepare a sample_list file. Example:
 ```
 head 03_sample_lists/sample_list_tagseq_03_cdca7.tsv
 ```
 - Run the main script. Example:
 ```
 sample=test13
-nextflow run 01_script/nextflow/main_AtRTD3_ATTE_STAR_mapping_salmon_counts.nf --sample_list 03_sample_lists/sample_list_tagseq_03_sandbox.tsv --outdir 04_output/"$sample" -profile cbe -w "$SCRATCHDIR"/nf_tmp_"$sample" --reference_genome tair10 -resume
+nextflow run 01_script/nextflow/main_AtRTD3_ATTE_STAR_mapping_salmon_counts.nf --sample_list 03_sample_lists/sample_list_tagseq_03_sandbox.tsv --outdir 04_output/"$sample" -profile cbe -w "$SCRATCHDIR"/nf_tmp_"$sample" --max_n_read 5000000
 ```
 
 - Run post processing steps to aggregate read counts, plot quality metrics and run MultiQC. Commands are found in 01_script/post_processing/00_post_processing.sh. Example:
