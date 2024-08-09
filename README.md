@@ -19,7 +19,7 @@ The pipeline does the following:
 # Usage
 ## Prepare genome files
 Execute the code in 
-```
+```shell
 cd 02_genome_files/01_script/
 ./prepare_genome_files.sh
 ./gene_annotations_for_deseq2.sh
@@ -28,17 +28,17 @@ The scripts are not perfectly wrapped, you have to execute each block in an inte
 
 ## Mapping and counting reads
 - Prepare a sample_list file. Example:
-```
+```shell
 head 03_sample_lists/sample_list_tagseq_03_cdca7.tsv
 ```
 - Run the main script. Example:
-```
+```shell
 sample=test13
 nextflow run 01_script/nextflow/main_AtRTD3_ATTE_STAR_mapping_salmon_counts.nf --sample_list 03_sample_lists/sample_list_tagseq_03_sandbox.tsv --outdir 04_output/"$sample" -profile cbe -w "$SCRATCHDIR"/nf_tmp_"$sample" --max_n_read 5000000
 ```
 
 - Run post processing steps to aggregate read counts, plot quality metrics and run MultiQC. Example:
-```
+```shell
 cd 01_script/post_processing/
 sbatch 01.0_post_processing.sbatch ../../04_output/test13
 ```
@@ -47,16 +47,16 @@ sbatch 01.0_post_processing.sbatch ../../04_output/test13
 A standard analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or even exclude all samples matching a string pattern, to test the influence of some samples on the DESeq2 outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
 
 - Prepare a DESeq2 sample_list file to describe your experiment design. Examples in:
-```
+```shell
 cat 02_sample_lists/DESeq2_tagseq_03_cdca7.tsv
 ```
 - (optional) Modify the DESeq2 environment file, to change annotations of interest. Default annotations are protein-coding genes and TAIR10 transposable elements.
-```
+```shell
 vi 01_script/post_processing/02.2_DESeq2_environment.R
 ```
 - Run a DESeq2 analysis. It runs DESeq2, normalizes and transforms counts, plots a PCA and a sample correlation heatmap, writes count tables, identifies differentially expressed genes (DEGs) for all treatment versus control comparisons and write tables, plots heatmaps of normalized & transformed counts at DEGs, write barplots of the number of DEGs per sample. It finally saves the environment and creates a script in "07_analysis" where you can start you own analysis.
 The order of arguments are: 
-```
+```shell
 sbatch 02.0_DESeq2.sbatch output_directory \
     outliers \
     outlier_pattern \
@@ -65,7 +65,7 @@ sbatch 02.0_DESeq2.sbatch output_directory \
     control_condition
 ```
 Example:
-```
+```shell
 sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE/02_counts/" \
     "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4" \
     "none" \
