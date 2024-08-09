@@ -64,9 +64,9 @@ sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD
 ```
 # Contributions
 Yoav Voichek developed the original pipeline. Vikas Shukla further improved it and put it on github. I created a fork from Vikas's pipeline. The main modifications I did are the following:
-- 3' adapters and polyA are trimmed more efficiently, increasing mapping rates by ~100%
 - reference transcriptome changed from TAIR10 to AtRTD3
 - transposable_element_gene annotations removed and replaced by TAIR10 AT.TE annotations. This improves the counting of 3' fragments and avoids ambiguity issues with counting reads at overlapping annotations
+- 3' adapters and polyA are trimmed more efficiently, increasing mapping rates by ~100%
 - incorporated read downsampling from Yoav's original code
 - map with STAR and count reads with salmon in alignment mode, instead of salmon pseudoalignment
 - count reads in sense and antisense
