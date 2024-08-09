@@ -2,7 +2,7 @@
 
 This pipeline is meant to analyze short-read transcriptome libraries built with a custom protocol established by Yoav Voichek and Pieter Clauw in the Nordborg lab.
 In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:cDNA duplexes are cleaved by Tn5, PCR amplifies the 3' ends of transcripts and adds Illumina adapters for sequencing. Further details of the library construction protocol can be found here:
-
+http://UPDATELINKLATER
 The pipeline does the following:
 - trim adapters, polyA, low quality base calls
 - collapses duplicates based on UMIs (no UMI mismatch allowed, 2 transcript mismatches allowed)
