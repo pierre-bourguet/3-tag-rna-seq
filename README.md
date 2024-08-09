@@ -17,6 +17,9 @@ cd 01_script/post_processing/
 sbatch 01.0_post_processing.sbatch ../../04_output/test13
 
 ## DESeq2
+Quantitative analysis of the read counts.
+One can control outliers to remove after a first analysis (e.g. : samples with low read counts). One can also test the influence of different samples on the DESeq2 outcome by excluding samples based on string patterns. One can control the type of annotations analyzed by modifying the DESeq2 environment file, where default includes protein-coding genes and transposable elements.
+
 - Prepare a DESeq2 sample_list file to describe your experiment design. Examples in:
 02_sample_lists/DESeq2_tagseq_03_cdca7.tsv
 
@@ -25,7 +28,7 @@ vi 01_script/post_processing/02.2_DESeq2_environment.R
 
 - Run a DESeq2 analysis. It runs DESeq2, normalizes and transforms counts, plots a PCA and a sample correlation heatmap, writes count tables, identifies differentially expressed genes (DEGs) for all treatment versus control comparisons and write tables, plots heatmaps of normalized & transformed counts at DEGs, write barplots of the number of DEGs per sample. It finally saves the environment and creates a script in "07_analysis" where you can start you own analysis.
 The order of arguments are: 
-sbatch 02.0_DESeq2.sbatch output_directory outliers sample_list_file sample_DESeq2_file control_condition
+sbatch 02.0_DESeq2.sbatch output_directory outliers outlier_pattern sample_list_file sample_DESeq2_file control_condition
 Example:
 sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE/02_counts/" "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4" "none" "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv" "../../03_sample_lists/DESeq2_tagseq_03_cdca7.tsv" "WT"
 
@@ -38,10 +41,9 @@ Yoav Voichek developed the original pipeline. Vikas Shukla further improved it a
 - map with STAR and count reads with salmon in alignment mode, instead of salmon pseudoalignment
 - count reads in sense and antisense
 - created an alternative version of the genome files to include a transgenic construct
+- incorporated a DESeq2 downstream analysis
 
 I also added a post processing step which generates:
 - files with aggregated counts
 - multiQC
 - tables and plots to summarize statistics for trimming, collapsing, mapping
-
-I incorporated an automated DESeq2 analysis of the data, where one can control outliers to remove after a first analysis (e.g. : samples with low read counts). One can also test the influence of different samples on the DESeq2 outcome by excluding samples based on string patterns. One can control the type of annotations analyzed by modifying the DESeq2 environment file, where default includes protein-coding genes and transposable elements.
