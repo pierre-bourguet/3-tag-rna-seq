@@ -6,9 +6,10 @@ In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:
 http://UPDATELINKLATER
 
 The pipeline does the following:
-- trim adapters, polyA, low quality base calls
-- collapses duplicates based on UMIs (no UMI mismatch allowed, 2 transcript mismatches allowed)
+- trim in 3' to remove adapters, polyA, low quality base calls
+- collapse duplicates based on 8-bp UMIs (no UMI mismatch allowed, two mismatches allowed in the transcript)
 - randomly subsample to a given number of reads (default: 10 millions)
+- create indexes based on provided genome files
 - map with STAR
 - output stranded and unstranded bigwig files
 - quantify sense and antisense reads with Salmon in alignment-mode
@@ -16,6 +17,15 @@ The pipeline does the following:
 - analyze relative to a control condition with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
 
 # Usage
+## Prepare genome files
+Execute the code in 
+```
+cd 02_genome_files/01_script/
+./prepare_genome_files.sh
+./gene_annotations_for_deseq2.sh
+```
+The script is not perfectly wrapped, you have to execute each block in an interactive session and make sure everything goes well, but you have to do this only once. If TAIR blocks your wget queries, you can download files from a web browser.
+
 ## Mapping
 - Prepare a sample_list file. Examples in:
 02_sample_lists/
