@@ -53,7 +53,7 @@ vi 01_script/post_processing/02.2_DESeq2_environment.R
 - Run the DESeq2 script. It does the following:
 	- run DESeq2, normalize and transform counts
 	- find differentially expressed genes (DEGs) for all treatments relative to a control condition (absolute log2FC >= 1, P < 0.1)	
-	- produce plots: PCA, sample-to-sample correlation heatmap, heatmaps of normalized & transformed counts at DEGs
+	- produce plots: PCA, heatmap of sample-to-sample correlations (using variance-stabilized counts), number of DEGs per sample, heatmaps of normalized & transformed counts at DEGs
 	- write tables: counts, pairwise comparisons, DEGs
 	- saves the environment and creates a script in "07_analysis" where you can start you own analysis.
 The order of arguments are: 
