@@ -46,22 +46,22 @@ sbatch 01.0_post_processing.sbatch ../../04_output/test13
 ## DESeq2
 A standard analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or even exclude all samples matching a string pattern, to test the influence of some samples on the DESeq2 outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
 
-- Prepare a DESeq2 sample_list file to describe your experiment design. Examples in:
-```shell
-cat 02_sample_lists/DESeq2_tagseq_03_cdca7.tsv
-```
 - (optional) Modify the DESeq2 environment file, to change annotations of interest. Default annotations are protein-coding genes and TAIR10 transposable elements.
 ```shell
 vi 01_script/post_processing/02.2_DESeq2_environment.R
 ```
-- Run a DESeq2 analysis. It runs DESeq2, normalizes and transforms counts, plots a PCA and a sample correlation heatmap, writes count tables, identifies differentially expressed genes (DEGs) for all treatment versus control comparisons and write tables, plots heatmaps of normalized & transformed counts at DEGs, write barplots of the number of DEGs per sample. It finally saves the environment and creates a script in "07_analysis" where you can start you own analysis.
+- Run the DESeq2 script. It does the following:
+	- run DESeq2, normalize and transform counts
+	- find differentially expressed genes (DEGs) for all treatments relative to a control condition (absolute log2FC >= 1, P < 0.1)	
+	- produce plots: PCA, sample-to-sample correlation heatmap, heatmaps of normalized & transformed counts at DEGs
+	- write tables: counts, pairwise comparisons, DEGs
+	- saves the environment and creates a script in "07_analysis" where you can start you own analysis.
 The order of arguments are: 
 ```shell
 sbatch 02.0_DESeq2.sbatch output_directory \
     outliers \
     outlier_pattern \
     sample_list_file \
-    sample_DESeq2_file \
     control_condition
 ```
 Example:
@@ -70,12 +70,11 @@ sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD
     "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4" \
     "none" \
     "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv" \
-    "../../03_sample_lists/DESeq2_tagseq_03_cdca7.tsv" \
     "WT"
 ```
 
 # Contributions
-Yoav Voichek developed the original pipeline. Vikas Shukla further improved it and put it on github. I created a fork from Vikas's pipeline. The main modifications I did are the following:
+Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further improved it and put it on github. I forked from Vikas's pipeline and did the following modifications:
 - reference transcriptome changed from TAIR10 to AtRTD3
 - transposable_element_gene annotations removed and replaced by TAIR10 AT.TE annotations. This improves the counting of 3' fragments and avoids ambiguity issues with counting reads at overlapping annotations
 - 3' adapters and polyA are trimmed more efficiently, increasing mapping rates by ~100%
