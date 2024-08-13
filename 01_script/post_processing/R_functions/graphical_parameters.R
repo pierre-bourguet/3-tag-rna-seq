@@ -1,6 +1,7 @@
 # colors ####
 
 suppressPackageStartupMessages(library("scico"))
+suppressPackageStartupMessages(library("circlize"))
 col_muted <- c("#CC6677", "#88CCEE", "#DDCC77", "#117733", "#332288", "#882255", "#44AA99", "#999933", "#AA4499", "#DDDDDD") # source is https://personal.sron.nl/~pault/
 col_vibrant <- c('#EE7733', '#0077BB', '#33BBEE', '#EE3377', '#CC3311', '#009988', '#BBBBBB')
 col_high_contrast <- c("#FFFFFF", '#004488', '#DDAA33', '#BB5566', '#000000')
