@@ -8,25 +8,15 @@
 print("loading environment")
 source("02.2_DESeq2_environment.R")
 
-print("importing arguments")
+print("R: importing arguments")
 
 # these are arguments for troubleshooting, they are over-ridden below by user-provided inputs when the whole script is executed
 args <- c(
-  "../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE/02_counts/",
+  "../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE_all_reads_x63_backup/02_counts/",
   "empty_R1,ddm1_a_long_b_2_R1,ab_2_R2,b_2_R1,a_long_2_R2,a_long_1_R3,a_long_2_R1",
   "mom1,ddm1_mom1,F2_WT,F2_a_2",
   "../../03_sample_lists/sample_list_tagseq_01_cdca7.tsv",
-  "../../03_sample_lists/DESeq2_tagseq_01_cdca7.tsv",
   "Col_0"
-)
-
-args <- c(
-  "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE_STAR/02_counts/",
-  "none",
-  "none",
-  "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv",
-  "../../03_sample_lists/DESeq2_tagseq_03_cdca7.tsv",
-  "WT"
 )
 
 # Parse command line arguments
@@ -35,8 +25,7 @@ base_dir <- args[1]
 outliers <- strsplit(args[2], ",")[[1]]
 outlier_patterns <- strsplit(args[3], ",")[[1]]
 sample_info_file <- args[4]
-DESeq2_info_file <- args[5]
-reference_condition <- args[6]
+reference_condition <- args[5]
 
 # Define the arguments for printing
 args_list <- list(
@@ -44,7 +33,6 @@ args_list <- list(
   "outliers" = outliers,
   "outlier patterns" = outlier_patterns,
   "sample info file" = sample_info_file,
-  "DESeq2 info file" = DESeq2_info_file,
   "reference condition" = reference_condition
 )
 
@@ -171,11 +159,12 @@ write.table(RPM_merged_avg, file = "normalized_counts/RPM_averaged.tsv", quote =
 # import sample information ####
 print("importing sample information")
 
-samples <- read.delim(paste0(current_dir, "/", DESeq2_info_file), header = TRUE, sep = ',', quote = "", dec = ".", comment.char = "")[, c(2, 3)]
-samples <- samples[order(samples[, 1], samples[, 2]),]  # Reorder samples by alphabetical names
-
-# Prepare a full name to remove outliers
-samples$full_name <- paste0(samples$condition, "_", samples$sample)
+# import sample info
+samples <- read_tsv(paste0(current_dir, "/", sample_info_file), col_names = c("path", "full_name"), show_col_types = FALSE)[,2] %>%
+  mutate(sample = str_extract(full_name, "R\\d+$")) %>%
+  mutate(condition = str_remove(full_name, "_R\\d+$")) %>%
+  # re order by alphabetical order
+  dplyr::arrange(condition, sample, .locale = "en")
 
 # Remove outliers
 samples <- samples %>%
@@ -202,7 +191,7 @@ DESeq2_function <- function(x) {  # x should be cts_summary.tsv file (summary of
   
   # Defining metadata
   coldata <- data.frame(
-    condition = gsub("_R.$", "", names(x)[sample_columns]),
+    condition = gsub("_R\\d+$", "", names(x)[sample_columns]),
     type = rep("single-strand", nrow(samples))
   )
   row.names(coldata) <- names(x)[sample_columns]
@@ -308,9 +297,8 @@ write.table(x=ESF_avg, file=paste0("normalized_counts/ESF_averaged.tsv"), quote 
 #
 # quality controls: heatmaps of euclidean distances between samples ####
 
-# import plate well position to see if position correlates with batch effects
-sample_wells <- read_tsv(paste0(current_dir, "/", sample_info_file)
-                         , col_names = FALSE, show_col_types = FALSE)
+# import plate well position to control if plate position correlates with batch effects
+sample_wells <- read_tsv(paste0(current_dir, "/", sample_info_file), col_names = FALSE, show_col_types = FALSE)
 
 # Extract the 'well' information
 sample_wells <- sample_wells %>%
