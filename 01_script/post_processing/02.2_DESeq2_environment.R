@@ -6,10 +6,12 @@ suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(DESeq2))
 
 # Paths to additional scripts
-source("/groups/berger/user/pierre.bourguet/genomics/scripts/R/DEG_heatmap.R")
-source("/groups/berger/user/pierre.bourguet/genomics/scripts/R/graphical_parameters.R")
-source("/groups/berger/user/pierre.bourguet/genomics/scripts/R/plot_heatmap_plate_batch_effect.R")
+source("R_functions/DEG_heatmap.R")
+source("R_functions/graphical_parameters.R")
+source("R_functions/plot_heatmap_plate_batch_effect.R")
 
+# remove error messages from complexheatmap
+ht_opt$message = FALSE
 
 # Annotation files ####################################################################################################
 
@@ -18,7 +20,7 @@ TEs <- as_tibble(read.delim("../../02_genome_files/02_input/TAIR10_Transposable_
                             , header = TRUE, sep = "\t", quote = "", comment.char = "", col.names = c("Geneid", "sense", "start", "end", "family", "superfamily")))
 
 # TAIR10 PCGs + pseudogenes
-# features <- as_tibble(read.delim("/groups/berger/user/pierre.bourguet/genomics/scripts/3_prime_tag-seq/pipeline_vikas/02_genome_files/03_output/TAIR10_GFF_PCG_pseudogene.tsv", header = TRUE, sep = "\t", quote = "", comment.char = ""))
+# features <- as_tibble(read.delim("../../02_genome_files/03_output/TAIR10_GFF_PCG_pseudogene.tsv", header = TRUE, sep = "\t", quote = "", comment.char = ""))
 features <- as_tibble(read.delim("../../02_genome_files/03_output/TAIR10_GFF_PCG.tsv", header = TRUE, sep = "\t", quote = "", comment.char = ""))
 
 
