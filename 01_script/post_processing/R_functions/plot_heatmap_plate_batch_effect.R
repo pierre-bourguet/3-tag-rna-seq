@@ -1,10 +1,16 @@
+# used for analysis of 3' tagseq data, but is suitable for any other data
+#
+# Usage:
+# sample_well should have these columns: sample well row column
+# sampleDistMatrix should be a distance matrix with row.names containing sample names
+
+suppressPackageStartupMessages(require(ComplexHeatmap))
+suppressPackageStartupMessages(require(circlize))
+suppressPackageStartupMessages(require(RColorBrewer))
+suppressPackageStartupMessages(require(dplyr))
+
 # function to plot a heatmap showing the row and columns of the input plate, to control for local batch effect
 create_heatmap_with_annotations <- function(sampleDistMatrix, sample_wells) {
-  
-  suppressPackageStartupMessages(require(ComplexHeatmap))
-  suppressPackageStartupMessages(require(circlize))
-  suppressPackageStartupMessages(require(RColorBrewer))
-  suppressPackageStartupMessages(require(dplyr))
   
   # Ensure row names in sampleDistMatrix match with sample names in sample_wells
   sample_wells <- sample_wells[match(rownames(sampleDistMatrix), sample_wells$sample), ]
@@ -47,9 +53,3 @@ create_heatmap_with_annotations <- function(sampleDistMatrix, sample_wells) {
     width=15, height=15
   )
 }
-
-# used for analysis of 3' tagseq data, but is suitable for any other data
-#
-# Usage:
-# sample_well should have these columns: sample well row column
-# sampleDistMatrix should be a distance matrix with row.names containing sample names
