@@ -42,7 +42,7 @@ process write_info {
 	executor 'slurm'
 	cpus 1
 	memory '1 GB'
-	time '1h'
+	time '5m'
 
 	publishDir "${params.outdir}/01_QC/raw_read_counts/", mode: 'copy'
 
@@ -64,7 +64,7 @@ process trim_tagseq {
 	executor 'slurm'
 	cpus 8
         memory { 8.GB + 16.GB * task.attempt }
-	time '1h'
+	time '20m'
 	module 'build-env/f2022:fastp/0.23.4-gcc-12.2.0'
 
 	publishDir "${params.outdir}/01_QC/fastp_trimming/", mode: 'copy', pattern: '*.{log,length,json,html}'
@@ -147,8 +147,8 @@ process clean_umi_duplicates {
 process combine_raw_counts {
 	executor 'slurm'
         cpus 1
-        memory '4 GB'
-        time '1h'
+        memory '0.1 GB'
+        time '5m'
 
 	publishDir "${params.outdir}/01_QC", mode: 'copy'
 
@@ -173,9 +173,9 @@ process combine_raw_counts {
 //This process summarizes the read counts by merging all files from process above and plotting bar plots by calling the Rscript 
 process Summarize_read_counts {
 	executor 'slurm'
-	cpus 4
-	memory '8 GB'
-	time '1h'
+	cpus 1
+	memory '1 GB'
+	time '5m'
 	module 'build-env/f2022:r/4.2.0-foss-2021b'
 	
 	publishDir "${params.outdir}/01_QC/", mode: 'copy'
@@ -205,9 +205,9 @@ process Summarize_read_counts {
 // This process generates the fastqc reports for all files after UMI removal
 process fastqc {
 	executor 'slurm'
-	cpus 8
-	memory '4 GB'
-	time '1h'
+	cpus 1
+	memory '1 GB'
+	time '20m'
 	module 'fastqc/0.11.9-java-11'
 
 	publishDir "${params.outdir}/01_QC/fastqc/", mode: 'copy', pattern: '*.{zip,html,txt}'
@@ -228,7 +228,7 @@ process download_genome {
 	executor 'slurm'
         cpus 4
         memory '8 GB'
-        time '1h'
+        time '20m'
 	module 'build-env/f2022:gffread/0.12.7-gcccore-12.2.0'
 	module 'build-env/f2022:samtools/1.18-gcc-12.3.0'
 
@@ -313,7 +313,7 @@ process create_salmon_index
 	executor 'slurm'
 	cpus 16
 	memory { 24.GB + 12.GB * task.attempt }
-	time '1h'
+	time '10m'
 	module 'build-env/f2022:salmon/1.10.1-gcc-12.2.0'
 
 	publishDir "${params.outdir}/04_indices/", mode: 'copy'

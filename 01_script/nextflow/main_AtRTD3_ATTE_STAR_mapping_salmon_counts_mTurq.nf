@@ -1,11 +1,21 @@
 #!/usr/bin/env nextflow
 
-//Channel created from input file and mapping of file name and path
+// Define a process parameter for the numerical argument
+params.max_n_read = params.max_n_read ?: 10000000
+
+// Access the argument in the code
+def myArg = params.max_n_read
+println "The maximum number of reads is: $myArg"
+
+ch_max_n_read = Channel.value(params.max_n_read)
+
+// Channel created from input file and mapping of file name and path
 samples = Channel.fromPath(params.sample_list)
                .splitText()
                .map { it.replaceFirst(/\n/,'') }
                .splitCsv(sep:'\t')
                .map { it -> [file(it[0]), it[1]] }
+
 
 //Channel for the R script to plot the read count summary in R
 params.rscript = file("${baseDir}/Summarize_read_counts.R")
@@ -23,18 +33,21 @@ params.gentrome = "/groups/berger/user/pierre.bourguet/genomics/scripts/3_prime_
 params.decoys = "/groups/berger/user/pierre.bourguet/genomics/scripts/3_prime_tag-seq/pipeline_vikas/02_genome_files/03_output/salmon_decoys/decoys_transgene.txt"
 params.adapters = "/groups/berger/user/pierre.bourguet/genomics/scripts/3_prime_tag-seq/pipeline_vikas/02_genome_files/02_input/adapter_fasta.fa"
 
+// import downsample process from downsample.nf
+include {downsample} from './downsample'
+params.downsample = -1
 
-//This process counts the no. of reads in the raw files for each sample 
+// This process counts the no. of reads in the raw files for each sample 
 process write_info {
 	executor 'slurm'
 	cpus 1
 	memory '1 GB'
-	time '1h'
+	time '5m'
 
 	publishDir "${params.outdir}/01_QC/raw_read_counts/", mode: 'copy'
 
 	input:
-	tuple file(filename), val(sample_name)
+	tuple path(filename), val(sample_name)
 
 	output:
 	path("${sample_name}_raw_read_counts.txt") 
@@ -46,18 +59,18 @@ process write_info {
 	"""
 }
 
-//This process trims the reads to 50 bp, removes the poly_x and counts the no. of reads after trimming
+// This process trims the reads to 50 bp, removes the poly_x and counts the no. of reads after trimming
 process trim_tagseq {
 	executor 'slurm'
 	cpus 8
         memory { 8.GB + 16.GB * task.attempt }
-	time '1h'
+	time '20m'
 	module 'build-env/f2022:fastp/0.23.4-gcc-12.2.0'
 
 	publishDir "${params.outdir}/01_QC/fastp_trimming/", mode: 'copy', pattern: '*.{log,length,json,html}'
 
 	input:
-	tuple file(filename), val(sample_name)
+	tuple path(filename), val(sample_name)
 	val adapters
 
 	output:
@@ -72,7 +85,7 @@ process trim_tagseq {
 	"""
 	# trim low quality bases, poly X & adapters; remove low quality bases at the tail (3' end)
 	fastp --thread 8 -i $filename -o "${sample_name}_fastp_output.fastq" \
-	--trim_poly_x --adapter_fasta $adapters --cut_tail --max_len1 150 \
+	--trim_poly_x --adapter_fasta $adapters --cut_tail --max_len1 100 \
 	 -h "${sample_name}_fastp.html" -j "${sample_name}_fastp.json" 2> "${sample_name}_fastp.log"
 
 	trimmed=\$(cat "${sample_name}_fastp_output.fastq" | wc -l | awk '{printf "%d\\n", \$1 / 4}')
@@ -80,7 +93,7 @@ process trim_tagseq {
 	"""
 }
 
-//After trimming, this process removes the UMIs and counts the read counts again
+// After trimming, this process removes the UMIs and counts the read counts again
 process clean_umi_duplicates {
 	executor 'slurm'
 	cpus 2
@@ -130,12 +143,12 @@ process clean_umi_duplicates {
 	"""
 }
 
-//This process collects all text files of read counts after every step
+// This process collects all text files of read counts after every step
 process combine_raw_counts {
 	executor 'slurm'
         cpus 1
-        memory '4 GB'
-        time '1h'
+        memory '0.1 GB'
+        time '5m'
 
 	publishDir "${params.outdir}/01_QC", mode: 'copy'
 
@@ -145,9 +158,9 @@ process combine_raw_counts {
 	path(umi_removed)
 
 	output:
-	file ("all_raw_read_counts.txt")
-	file ("all_trimmed_read_counts.txt")
-	file ("all_umi_collapsed_read_counts.txt")
+	path ("all_raw_read_counts.txt")
+	path ("all_trimmed_read_counts.txt")
+	path ("all_umi_collapsed_read_counts.txt")
 
 	script:
 	'''
@@ -160,9 +173,9 @@ process combine_raw_counts {
 //This process summarizes the read counts by merging all files from process above and plotting bar plots by calling the Rscript 
 process Summarize_read_counts {
 	executor 'slurm'
-	cpus 4
-	memory '8 GB'
-	time '1h'
+	cpus 1
+	memory '1 GB'
+	time '5m'
 	module 'build-env/f2022:r/4.2.0-foss-2021b'
 	
 	publishDir "${params.outdir}/01_QC/", mode: 'copy'
@@ -189,12 +202,12 @@ process Summarize_read_counts {
 	"""
 }
 
-//This process generates the fastqc reports for all files after UMI removal
+// This process generates the fastqc reports for all files after UMI removal
 process fastqc {
 	executor 'slurm'
-	cpus 8
-	memory '4 GB'
-	time '1h'
+	cpus 1
+	memory '1 GB'
+	time '20m'
 	module 'fastqc/0.11.9-java-11'
 
 	publishDir "${params.outdir}/01_QC/fastqc/", mode: 'copy', pattern: '*.{zip,html,txt}'
@@ -215,7 +228,7 @@ process download_genome {
 	executor 'slurm'
         cpus 4
         memory '8 GB'
-        time '1h'
+        time '20m'
 	module 'build-env/f2022:gffread/0.12.7-gcccore-12.2.0'
 	module 'build-env/f2022:samtools/1.18-gcc-12.3.0'
 
@@ -227,7 +240,7 @@ process download_genome {
 
 	output:
 	tuple file("TAIR10_genome.fa"), file("TAIR10_annotations.gtf")
-	file ("chrom_sizes.txt")
+	path ("chrom_sizes.txt")
 
 	script:
 	"""
@@ -294,13 +307,13 @@ process star_alignment {
 	"""
 }
 
-//This process generates a salmon index using your input fasta as a background genome
+// This process generates a salmon index using your input fasta as a background genome
 process create_salmon_index
 {
 	executor 'slurm'
-	cpus 32
-	memory { 12.GB + 12.GB * task.attempt }
-	time '1h'
+	cpus 16
+	memory { 24.GB + 12.GB * task.attempt }
+	time '10m'
 	module 'build-env/f2022:salmon/1.10.1-gcc-12.2.0'
 
 	publishDir "${params.outdir}/04_indices/", mode: 'copy'
@@ -315,11 +328,11 @@ process create_salmon_index
 
 	script:
 	"""
-	salmon index -t $gentrome -d $decoys -i salmon_index/ -p 32
+	salmon index -t $gentrome -d $decoys -i salmon_index/ -p 16
 	"""
 }
 
-//This process quantifies expression using the salmon index created above
+// This process quantifies expression using the salmon index created above
 process quantify_exp {
 	executor 'slurm'
 	cpus 8
@@ -344,7 +357,7 @@ process quantify_exp {
 	"""
 }
 
-//This process quantifies expression using the STAR-aligned BAM file. It requires no more than 8 threads, memory is limiting
+// This process quantifies expression using the STAR-aligned BAM file. It requires no more than 8 threads, memory is limiting
 process quantify_exp_STAR_mapping {
 	executor 'slurm'
 	cpus 8
@@ -375,6 +388,7 @@ process bedgraph2bigwig {
 		memory '8 GB'
 		time '1h'
 	module 'build-env/f2021:bedgraphtobigwig/385-linux-x86_64'
+
 
 	publishDir "$params.outdir/03_STAR_bigwigs/", mode: 'copy', pattern: '**/*bw'
 
@@ -424,7 +438,7 @@ process correlation_plots {
 	publishDir "$params.outdir/01_QC/deeptools_plots/", mode: 'copy', pattern: '*.{pdf,tab}'
 
 	input:
-	path(bigwig_files)
+	path (bigwig_files)
 
 	output:
 	path ("summary.npz")
@@ -461,46 +475,49 @@ process correlation_plots {
 
 workflow {
 
-	//Writing the raw read counts in the metadata
+	// Writing the raw read counts in the metadata
 	raw_counts = write_info(samples)
 	
-	//Trimming and removing poly_x
+	// Trimming and removing poly_x
 	trimmed_samples = trim_tagseq(samples, params.adapters)
 	
-	//UMI removal
+	// UMI removal
 	umi_cleaned = clean_umi_duplicates(trimmed_samples[0], trimmed_samples[1])
 
-	//Generate fastqc reports
-	fastqc(umi_cleaned[0])
+	// downsampling reads
+	ds_reads = downsample(umi_cleaned[0].combine(ch_max_n_read).combine(Channel.from(1)))
+
+	// Generate fastqc reports
+	fastqc(ds_reads[0])
 	
-	//Collecting all read counts
+	// Collecting all read counts
 	read_counts = combine_raw_counts(raw_counts.collect(), trimmed_samples[5].collect(), umi_cleaned[5].collect())
-	
+		
 	//Plotting the read count summary in R
 	Summarize_read_counts(rscript, read_counts)
-	
-	//Downloading genome and annotation files from TAIR10
+
+	// Downloading genome and annotation files from TAIR10
 	downloaded_files = download_genome(params.genome, params.gff)
 
-	//Creating STAR index from downloaded genome and annotation files
+	// Creating STAR index from downloaded genome and annotation files
 	star_index = create_star_index(downloaded_files[0])
 	
-	//Creating the salmon index from the downloaded (concatenated) files
+	// Creating the salmon index from the downloaded (concatenated) files
 	salmon_index = create_salmon_index(params.gentrome, params.decoys )
 	
-	//STAR alignment to get the sorted bam and bedGraph files
-	aligned_bam = star_alignment(star_index, umi_cleaned[0])
+	// STAR alignment to get the sorted bam and bedGraph files
+	aligned_bam = star_alignment(star_index, ds_reads[0])
 
-	//Quantify gene expression using salmon	
-	quantify_exp(umi_cleaned[0], salmon_index[1])
+	// Quantify gene expression using salmon	
+	quantify_exp(ds_reads[0], salmon_index[1])
 
-	//Quantify gene expression using salmon	
+	// Quantify gene expression using salmon	
 	quantify_exp_STAR_mapping(aligned_bam[3], params.cdna)
 
-	//Converting the bedGraph files coming out of STAR alignment to bigwig files
+	// Converting the bedGraph files coming out of STAR alignment to bigwig files
 	bigwigs_to_plot = bedgraph2bigwig(aligned_bam[0], downloaded_files[1])
 
-	//Plotting Pearson, Spearmann Correlation and PCA of the bw files
+	// Plotting Pearson, Spearmann Correlation and PCA of the bw files
 	correlation_plots(bigwigs_to_plot[0].toSortedList())
 
 }
