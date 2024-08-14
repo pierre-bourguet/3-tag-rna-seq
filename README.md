@@ -14,7 +14,7 @@ The pipeline does the following:
 - output stranded and unstranded bigwig files
 - quantify sense and antisense reads with Salmon in alignment-mode
 - generate plots to inspect quality metrics: multiplexing, trimming, duplicates, multiQC, sample to sample correlation
-- analyze relative to a control condition with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
+- analyze differential gene expression with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
 
 # Usage
 ## Prepare genome files
@@ -44,18 +44,19 @@ sbatch 01.0_post_processing.sbatch ../../04_output/test13
 ```
 
 ## DESeq2
-A standard analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or even exclude all samples matching a string pattern, to test the influence of some samples on the DESeq2 outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
+An analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or exclude all samples matching a string pattern, to test the influence of some samples on the outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
 
 - (optional) Modify the DESeq2 environment file, to change annotations of interest. Default annotations are protein-coding genes and TAIR10 transposable elements.
 ```shell
 vi 01_script/post_processing/02.2_DESeq2_environment.R
 ```
 - Run the DESeq2 script. It does the following:
-	- run DESeq2, normalize and transform counts
+	- run DESeq2, normalize with estimated size factors (ESF) and transform counts using a regularized log (rlog).
 	- find differentially expressed genes (DEGs) for all treatments relative to a control condition (absolute log2FC >= 1, P < 0.1)	
 	- produce plots: PCA, heatmap of sample-to-sample correlations (using variance-stabilized counts), number of DEGs per sample, heatmaps of normalized & transformed counts at DEGs
-	- write tables: counts, pairwise comparisons, DEGs
-	- saves the environment and creates a script in "07_analysis" where you can start you own analysis.
+	- write tables: normalized (ESF) & transformed (rlog) counts, pairwise comparisons, DEGs. RPM tables are also provided based on Salmon outputs.
+	- saves the environment and creates a script in "07_analysis" where you can start you own analysis using this environment.
+
 The order of arguments are: 
 ```shell
 sbatch 02.0_DESeq2.sbatch output_directory \
@@ -83,9 +84,10 @@ Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further impr
 - count reads in sense and antisense
 - output stranded and unstranded bigwig files
 - created an alternative version of the genome files to include a transgenic construct
-- incorporated the DESeq2 downstream analysis
 
 I also added a post processing step which generates:
 - files with aggregated counts
 - multiQC
 - tables and plots to summarize statistics for trimming, collapsing, mapping
+
+I incorporated the DESeq2 downstream analysis.
