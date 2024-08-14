@@ -85,7 +85,7 @@ process trim_tagseq {
 	"""
 	# trim low quality bases, poly X & adapters; remove low quality bases at the tail (3' end)
 	fastp --thread 8 -i $filename -o "${sample_name}_fastp_output.fastq" \
-	--trim_poly_x --adapter_fasta $adapters --cut_tail --max_len1 100 \
+	--trim_poly_x --adapter_fasta $adapters --cut_tail --max_len1 150 --length_required 50 \
 	 -h "${sample_name}_fastp.html" -j "${sample_name}_fastp.json" 2> "${sample_name}_fastp.log"
 
 	trimmed=\$(cat "${sample_name}_fastp_output.fastq" | wc -l | awk '{printf "%d\\n", \$1 / 4}')
@@ -386,7 +386,7 @@ process bedgraph2bigwig {
 	executor 'slurm'
 		cpus 2
 		memory '8 GB'
-		time '1h'
+		time '20m'
 	module 'build-env/f2021:bedgraphtobigwig/385-linux-x86_64'
 
 
