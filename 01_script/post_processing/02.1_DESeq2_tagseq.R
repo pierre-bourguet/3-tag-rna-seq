@@ -36,10 +36,14 @@ args_list <- list(
   "reference condition" = reference_condition
 )
 
+sink(paste0(base_dir, "../06_DESeq2/DESeq2_log.txt"))
+
 # Print each argument with an additional newline between each
 for (arg_name in names(args_list)) {
   cat(paste(arg_name, ": ", args_list[[arg_name]], "\n\n", sep = ""))
 }
+
+sink()
 
 # save current directory
 current_dir <- getwd()
