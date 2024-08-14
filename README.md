@@ -85,7 +85,7 @@ Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further impr
 - output stranded and unstranded bigwig files
 - created an alternative version of the genome files to include a transgenic construct
 
-I also added a post processing step which generates:
+I added a post processing step which generates:
 - files with aggregated counts
 - multiQC
 - tables and plots to summarize statistics for trimming, collapsing, mapping
