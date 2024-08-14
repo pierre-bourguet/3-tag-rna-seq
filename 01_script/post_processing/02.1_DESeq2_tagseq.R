@@ -12,8 +12,8 @@ print("R: importing arguments")
 
 # these are arguments for troubleshooting, they are over-ridden below by user-provided inputs when the whole script is executed
 args <- c(
-  "../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE_all_reads_x63_backup/02_counts/",
-  "empty_R1,ddm1_a_long_b_2_R1,ab_2_R2,b_2_R1,a_long_2_R2,a_long_1_R3,a_long_2_R1",
+  "../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE_150bp_5M_min50bp/02_counts/",
+  "empty_R1,ddm1_a_long_b_2_R1,F2_ddm1_R1,F2_ddm1_a_2_R1,ddm1_ab_2_R1,ddm1_a_1_R3,a_long_b_R1,b_2_R1,ab_2_R2,ab_1_R1,a_2_R3",
   "mom1,ddm1_mom1,F2_WT,F2_a_2",
   "../../03_sample_lists/sample_list_tagseq_01_cdca7.tsv",
   "Col_0"
@@ -439,7 +439,7 @@ down_TEs_intersect_filter <- function(res, TE_df, feature_df) {
   TE_geneids <- c(eval(parse(text=paste0(TE_df, "$Geneid"))), paste0(eval(parse(text=paste0(TE_df, "$Geneid"))), "_AS")) # this is to include both sense and antisense quantifications
   
   # return geneids for significant DEGs
-  down_TEs <- row.names(res[row.names(res) %in% TE_geneids & res$log2FoldChange >=1 & !is.na(res$padj) & res$padj < 0.1,])
+  down_TEs <- row.names(res[row.names(res) %in% TE_geneids & res$log2FoldChange <=-1 & !is.na(res$padj) & res$padj < 0.1,])
   down_features <- row.names(res[row.names(res) %in% feature_geneids & res$log2FoldChange >=1 & !is.na(res$padj) & res$padj < 0.1,])
   
   # filter out:
@@ -469,8 +469,6 @@ down_TEs_intersect_filter <- function(res, TE_df, feature_df) {
 #
 # DEGs found in batch mode (including all conditions): export tables and heatmaps #### 
 print("DEGs found in batch mode: export tables and heatmaps")
-
-
 
 # list of all treatment vs control comparisons
 all_res <- Map(f, paste0("res_", conditions), as.list(conditions)) 
@@ -751,3 +749,4 @@ file_path <- "../07_analysis/your_analysis.R"
 dir.create(dirname(file_path), recursive = TRUE, showWarnings = F)
 writeLines(script_content, file_path)
 
+#
