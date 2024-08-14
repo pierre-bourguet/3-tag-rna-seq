@@ -11,7 +11,7 @@ The pipeline does the following:
 - randomly subsample to a given number of reads (default: 10 millions)
 - create indexes based on provided genome files
 - map with STAR
-- output stranded and unstranded bigwig files
+- output bigwig files, stranded or unstranded, including or excluding multi-mapping reads
 - quantify sense and antisense reads with Salmon in alignment-mode
 - generate plots to inspect quality metrics: multiplexing, trimming, duplicates, multiQC, sample to sample correlation
 - analyze differential gene expression with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
@@ -78,7 +78,7 @@ sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD
 Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further improved it and put it on github. I forked from Vikas's pipeline and did the following modifications:
 - reference transcriptome changed from TAIR10 to AtRTD3
 - transposable_element_gene annotations removed and replaced by TAIR10 AT.TE annotations. This improves the counting of 3' fragments and avoids ambiguity issues with counting reads at overlapping annotations
-- 3' adapters and polyA are trimmed explicitly
+- to improve mapping rates, 3' adapters and polyA are trimmed explicitly and reads shorter than 50bp are discarded
 - incorporated read downsampling from Yoav's original code
 - map with STAR and count reads with salmon in alignment mode, instead of salmon pseudoalignment
 - count reads in sense and antisense
