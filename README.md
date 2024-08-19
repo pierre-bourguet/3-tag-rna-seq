@@ -75,7 +75,7 @@ sbatch 02.0_DESeq2.sbatch "../../04_output/tagseq_03_cdca7_complementation_AtRTD
 ```
 
 # Contributions
-Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further improved it and put it on github. I forked from Vikas's pipeline and did the following modifications:
+Yoav Voichek developed the original nextflow pipeline. Vikas Shukla improved it and put it on github. I forked from Vikas's pipeline and did the following modifications:
 - reference transcriptome changed from TAIR10 to AtRTD3
 - transposable_element_gene annotations removed and replaced by TAIR10 AT.TE annotations. This improves the counting of 3' fragments and avoids ambiguity issues with counting reads at overlapping annotations
 - to improve mapping rates, 3' adapters and polyA are trimmed explicitly and reads shorter than 50bp are discarded
@@ -83,6 +83,7 @@ Yoav Voichek developed the original nextflow pipeline. Vikas Shukla further impr
 - map with STAR and count reads with salmon in alignment mode, instead of salmon pseudoalignment
 - count reads in sense and antisense
 - output stranded and unstranded bigwig files
+- reorganized output folder architecture
 - created an alternative version of the genome files to include a transgenic construct
 
 I added a post processing step which generates:
