@@ -36,15 +36,6 @@ args_list <- list(
   "reference condition" = reference_condition
 )
 
-sink(paste0(base_dir, "../06_DESeq2/DESeq2_log.txt"))
-
-# Print each argument with an additional newline between each
-for (arg_name in names(args_list)) {
-  cat(paste(arg_name, ": ", args_list[[arg_name]], "\n\n", sep = ""))
-}
-
-sink()
-
 # save current directory
 current_dir <- getwd()
 # set working directory
@@ -53,6 +44,16 @@ setwd(base_dir)
 # Create output directory for plots and tables
 output_dir <- "../06_DESeq2/"
 dir.create(paste0(output_dir, "default_plots/"), showWarnings = F, recursive = T)
+
+# prepare output log file
+sink(paste0("../06_DESeq2/DESeq2_log.txt"))
+
+# Print each argument with an additional newline between each
+for (arg_name in names(args_list)) {
+  cat(paste(arg_name, ": ", args_list[[arg_name]], "\n\n", sep = ""))
+}
+
+sink()
 
 #
 # import counts ####
