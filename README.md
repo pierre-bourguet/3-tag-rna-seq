@@ -6,8 +6,8 @@ In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:
 http://UPDATELINKLATER
 
 The pipeline does the following:
-- trim reads in 3' to remove adapters, polyA, low quality base calls
-- collapse duplicates based on 8-bp UMIs (no UMI mismatch allowed, two mismatches allowed in the transcript)
+- trim reads in 3' to remove adapters, polyA, low quality base calls, reads shorter than 50bp
+- collapse duplicates based on 8-bp UMIs (mismatch allowed: 0 for UMIs, 2 in the transcript)
 - randomly subsample to a given number of reads (default: 10 millions)
 - create indexes based on provided genome files
 - map with STAR
@@ -44,7 +44,7 @@ sbatch 01.0_post_processing.sbatch ../../04_output/test13
 ```
 
 ## DESeq2
-An analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or exclude all samples matching a string pattern, to test the influence of some samples on the outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
+An analysis of differentially expressed genes (DEGs). You can remove outliers (e.g. : samples with low read counts), or exclude all samples matching a string pattern, to test their influence on the outcome. By default, the analysis focuses on protein-coding genes and transposable elements, but you can control this by modifying the DESeq2 environment file.
 
 - (optional) Modify the DESeq2 environment file, to change annotations of interest. Default annotations are protein-coding genes and TAIR10 transposable elements.
 ```shell
