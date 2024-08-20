@@ -58,6 +58,18 @@ cat 03_output/atRTD3_TS_21Feb22_transfix_no_TEG.gff 03_output/TAIR10_GFF3_ATTEs.
 #cp /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/mTurq_3xcMyc_UBQ10_ter_pAlli_Venus.gff /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/mTurq_3xcMyc_UBQ10_ter_pAlli_Venus.fas /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/transgene_cDNAs.fas 02_input
 # i remade them instead to improve counting of transgene reads. See PPT in data_summaries/methods/3' tag seq analysis.pptx
 
+# split the transgene fasta file into lines of 60 characters maximum, in case that is a problem later on
+awk 'length($0) > 60 && $0 !~ /^>/ {
+    while (length($0) > 60) {
+        print substr($0, 1, 60);
+        $0 = substr($0, 61);
+    }
+    print $0;
+    next
+}
+{ print }' transgene_cDNAs.fas > transgene_cDNAs.fas.tmp
+mv transgene_cDNAs.fas.tmp transgene_cDNAs.fas 
+
 # genome fasta file (for bowtie)
 gzip -d 02_input/TAIR10_chr_all.fas.gz
 cat 02_input/TAIR10_chr_all.fas 02_input/mTurq_3xcMyc_UBQ10_ter_pAlli_Venus.fas > 03_output/TAIR10_chr_all_mTurq_transgene.fas 
