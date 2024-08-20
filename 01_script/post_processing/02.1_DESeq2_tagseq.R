@@ -14,7 +14,8 @@ print("R: importing arguments")
 args <- c(
   "../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE_150bp_5M_min50bp/02_counts/",
   "empty_R1,ddm1_a_long_b_2_R1,F2_ddm1_R1,F2_ddm1_a_2_R1,ddm1_ab_2_R1,ddm1_a_1_R3,a_long_b_R1,b_2_R1,ab_2_R2,ab_1_R1,a_2_R3",
-  "mom1,ddm1_mom1,F2_WT,F2_a_2",
+  "empty_R1,ddm1_a_long_b_2_R1,F2_ddm1_a_2_R1,ddm1_ab_2_R1,ddm1_a_1_R3,a_long_b_R1,b_2_R1,ab_2_R2,ab_1_R1,a_2_R3",
+  "mom1,F2_WT,F2_a_2",
   "../../03_sample_lists/sample_list_tagseq_01_cdca7.tsv",
   "Col_0"
 )
@@ -268,7 +269,7 @@ data <- as_tibble(pcaData) %>%
   arrange(desc(PC1)) # Arrange by PC1 to get the order
 
 # barplot
-ggplot(data
+barplot_PC1 <- ggplot(data
        , aes(x = PC1, y = reorder(name, PC1), fill = condition)) +
   geom_bar(stat = "identity", orientation = "y", colour="black") +
   labs(title = paste0("Ordered PC1 Values (", ntop_variable_features, " most variable features)"), x = "PC1", y = "Condition") +
@@ -276,7 +277,7 @@ ggplot(data
   theme_minimal() +
   theme(axis.text.y = element_text(angle = 0, hjust = 1)) # Ensure y-axis labels are readable
 
-ggsave(paste0(output_dir, "default_plots/PCA_barplot_of_PC1.pdf"), width = 8, height = 10)
+ggsave(plot = barplot_PC1, paste0(output_dir, "default_plots/PCA_barplot_of_PC1.pdf"), width = 8, height = 10)
 
 #
 # estimated size factors normalization (from DESeq2, median of ratios to geometric mean): write tables ####
