@@ -95,7 +95,7 @@ counts_merged <- counts %>%
   dplyr::group_by(Geneid) %>%
   dplyr::summarise(across(everything(), sum)) %>%  # Sum the counts of all isoforms for each gene
   dplyr::filter(!str_detect(Geneid, "-")) %>%  # Remove transcript fusions
-  dplyr::filter(str_detect(Geneid, "^AT[1-5]")) %>%  # Only keep geneids from chromosome 1 to 5
+  dplyr::filter(str_detect(Geneid, "^AT[1-5]|mTurq_3xcMyc|Venus")) %>%  # Only keep geneids from chromosome 1 to 5, or transgenic genes containing mTurq_3xcMyc or Venus
   dplyr::filter(Geneid %in% TEs$Geneid | Geneid %in% paste0(TEs$Geneid, "_AS") | Geneid %in% features$Geneid | Geneid %in% paste0(features$Geneid, "_AS"))  # Only keep geneids from TEs and selected features
 
 # import RPM values, merge transcript variants & replicates, write merged files ####
