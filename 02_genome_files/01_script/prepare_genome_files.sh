@@ -56,9 +56,10 @@ cat 03_output/atRTD3_TS_21Feb22_transfix_no_TEG.gff 03_output/TAIR10_GFF3_ATTEs.
 
 # import manually created gff and fasta files
 #cp /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/mTurq_3xcMyc_UBQ10_ter_pAlli_Venus.gff /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/mTurq_3xcMyc_UBQ10_ter_pAlli_Venus.fas /groups/berger/user/pierre.bourguet/genomics/Araport11/mTurq-3xcMyc_transgene/transgene_cDNAs.fas 02_input
-# i remade them instead to improve counting of transgene reads. See PPT in data_summaries/methods/3' tag seq analysis.pptx
+# i remade them instead to improve counting of transgene reads. See tagseq 03 PPT summary.
 
 # split the transgene fasta file into lines of 60 characters maximum, in case that is a problem later on
+cd 02_input
 awk 'length($0) > 60 && $0 !~ /^>/ {
     while (length($0) > 60) {
         print substr($0, 1, 60);
@@ -69,6 +70,7 @@ awk 'length($0) > 60 && $0 !~ /^>/ {
 }
 { print }' transgene_cDNAs.fas > transgene_cDNAs.fas.tmp
 mv transgene_cDNAs.fas.tmp transgene_cDNAs.fas 
+cd ..
 
 # genome fasta file (for bowtie)
 gzip -d 02_input/TAIR10_chr_all.fas.gz
@@ -87,12 +89,12 @@ mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	protein	1	873	.	+	.	ID=mTurq_3xcMy
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	exon	1	1505	.	+	.	Parent=mTurq_3xcMyc.1
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	CDS	1	873	.	+	0	Parent=mTurq_3xcMyc.1,mTurq_3xcMyc.1-Protein;
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	three_prime_UTR	874	1505	.	+	.	Parent=mTurq_3xcMyc.1
-mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	gene	1510	3148	.	+	.	ID=pAlli_Venus;Name=pAlli_Venus;Note=protein_coding_gene
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	gene	1510	3148	.	+	.	ID=pAlli_Venus;Note=protein_coding_gene;Name=pAlli_Venus
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	mRNA	1510	3148	.	+	.	ID=pAlli_Venus.1;Parent=pAlli_Venus;Name=pAlli_Venus.1;Index=1
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	protein	2001	2720	.	+	.	ID=pAlli_Venus.1-Protein;Name=pAlli_Venus.1;Derives_from=pAlli_Venus.1
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	exon	1510	3148	.	+	.	Parent=pAlli_Venus.1
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	five_prime_UTR	1510	2000	.	+	.	Parent=pAlli_Venus.1
-mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	CDS	2001	2720	.	+	0	Parent=pAlli_Venus.1
+mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	CDS	2001	2720	.	+	0	Parent=pAlli_Venus.1,pAlli_Venus.1-Protein;
 mTurq_3xcMyc_UBQ10_ter_and_pAlli_Venus	TAIR10	three_prime_UTR	2721	3148	.	+	.	Parent=pAlli_Venus.1
 
 # merge with AtRTD3
@@ -106,23 +108,22 @@ mkdir 03_output/salmon_decoys
 
 ## decoy files
 # without transgene
-cat 03_output/TAIR10_chr_all_mTurq_transgene.fas | grep ">" | sed 's/\ .*// ; s/^>//' > 03_output/salmon_decoys/decoys_transgene.txt
-# with transgene
 cat 02_input/TAIR10_chr_all.fas | grep ">" | sed 's/\ .*// ; s/^>//' > 03_output/salmon_decoys/decoys.txt
+# with transgene
+cat 03_output/TAIR10_chr_all_mTurq_transgene.fas | grep ">" | sed 's/\ .*// ; s/^>//' > 03_output/salmon_decoys/decoys_transgene.txt
 
 ## gentrome files
 # without transgene
 cat 03_output/atRTD3_29122021_no_TEG_w_ATTE.fa 02_input/TAIR10_chr_all.fas > 03_output/salmon_decoys/gentrome_atRTD3_29122021_no_TEG_w_ATTE.fna
-# with the transgene
+# with transgene
 cat 03_output/atRTD3_29122021_no_TEG_w_ATTE_mTurq_transgene.fa 03_output/TAIR10_chr_all_mTurq_transgene.fas > 03_output/salmon_decoys/gentrome_atRTD3_29122021_no_TEG_w_ATTE_mTurq_transgene.fna
 
 
 #### To have STAR mapping compatible with salmon counting: repair the GFF file using AGAT #########################################################
 # this is because the AtRTD3 GFF file doesn't always match the fasta file: there is sometimes a few bp difference between two transcripts, causing salmon to crash
 
-cd /groups/berger/user/pierre.bourguet/genomics/scripts/3_prime_tag-seq/pipeline_vikas/02_genome_files/03_output/
-mkdir agat_fix_gff
-cd agat_fix_gff
+mkdir -p 03_output/agat_fix_gff
+cd 03_output/agat_fix_gff
 
 # use singularity to load agat: you need an interactive session with more resources than usual for this (eg 16 CPUs, 16 Gb RAM)
 singularity pull docker://quay.io/biocontainers/agat:1.0.0--pl5321hdfd78af_0
@@ -154,5 +155,5 @@ cat atRTD3_TS_21Feb22_transfix_no_TEG_w_ATTE_fixed.fa ../../02_input/transgene_c
 ## regenerate gentrome files
 # without transgene
 cat atRTD3_TS_21Feb22_transfix_no_TEG_w_ATTE_fixed.fa ../../02_input/TAIR10_chr_all.fas > ../salmon_decoys/gentrome_atRTD3_29122021_no_TEG_w_ATTE_fixed.fna
-# with the transgene
+# with transgene
 cat atRTD3_TS_21Feb22_transfix_no_TEG_w_ATTE_fixed_mTurq_transgene.fa ../../03_output/TAIR10_chr_all_mTurq_transgene.fas > ../salmon_decoys/gentrome_atRTD3_29122021_no_TEG_w_ATTE_fixed_mTurq_transgene.fna
