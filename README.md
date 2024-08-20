@@ -53,7 +53,11 @@ vi 01_script/post_processing/02.2_DESeq2_environment.R
 - Run the DESeq2 script. It does the following:
 	- run DESeq2, normalize with estimated size factors (ESF) and transform counts using a regularized log (rlog).
 	- find differentially expressed genes (DEGs) for all treatments relative to a control condition (absolute log2FC >= 1, P < 0.1)	
-	- produce plots: PCA, heatmap of sample-to-sample correlations (using variance-stabilized counts), number of DEGs per sample, heatmaps of normalized & transformed counts at DEGs
+	- produce plots:
+        - PCA
+        - heatmap of sample-to-sample correlations (using variance-stabilized counts), with plate position to control for biases
+        - number of DEGs per sample
+        - heatmaps of normalized & transformed counts at DEGs
 	- write tables: normalized (ESF) & transformed (rlog) counts, pairwise comparisons, DEGs. RPM tables are also provided based on Salmon outputs.
 	- saves the environment and creates a script in "07_analysis" where you can start you own analysis using this environment.
 
