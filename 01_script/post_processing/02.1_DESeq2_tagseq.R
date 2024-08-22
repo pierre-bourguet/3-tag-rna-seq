@@ -20,6 +20,14 @@ args <- c(
   "Col_0"
 )
 
+args <- c(
+  "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE_150bp_3M_min_50bp/02_counts/",
+  "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4",
+  "none",
+  "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv",
+  "WT"
+)
+
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
 base_dir <- args[1]
@@ -230,14 +238,14 @@ dds <- DESeq2_function(counts_merged)
 save(dds, file = "../06_DESeq2/DESeq2_object.RData")
 
 #
-# PCA ####
+# PCA using VST ####
 
 print("plotting PCA using vst transformation")
 
-#### PCAs
-
 # vst transformation
 vsd <- vst(dds, blind=FALSE)
+
+#### PCAs
 
 # extract PCA data to filter samples easily
 ntop_variable_features <- 1000 # number of most variable features for PCA
@@ -280,28 +288,7 @@ barplot_PC1 <- ggplot(data
 ggsave(plot = barplot_PC1, paste0(output_dir, "default_plots/PCA_barplot_of_PC1.pdf"), width = 8, height = 10)
 
 #
-# estimated size factors normalization (from DESeq2, median of ratios to geometric mean): write tables ####
-print("normalizing counts with estimated size factors")
-
-# median of ratios
-ESF <- as.data.frame(counts(dds, normalized=T)) %>%
-  mutate(Geneid = row.names(.)) %>%
-  dplyr::select(Geneid, everything())
-
-# average replicates
-ESF_avg <- ESF %>%
-  pivot_longer(cols = -Geneid, names_to = "sample", values_to = "expression") %>%
-  mutate(condition = str_replace(sample, "_R\\d+$", "")) %>% # remove the _R + number suffix
-  group_by(Geneid, condition) %>%
-  summarise(average_expression = mean(expression), .groups = 'drop') %>% # average expression
-  pivot_wider(names_from = condition, values_from = average_expression, names_sort = T)
-
-# write table of library-size normalized counts
-write.table(x=ESF, file=paste0("normalized_counts/ESF.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-write.table(x=ESF_avg, file=paste0("normalized_counts/ESF_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-
-#
-# quality controls: heatmaps of euclidean distances between samples ####
+# heatmaps of euclidean distances between samples using VST ####
 
 # import plate well position to control if plate position correlates with batch effects
 sample_wells <- read_tsv(paste0(current_dir, "/", sample_info_file), col_names = FALSE, show_col_types = FALSE)
@@ -329,16 +316,37 @@ create_heatmap_with_annotations(sampleDistMatrix, sample_wells)
 dev.off()
 
 #
-# rlog transformation: write tables ####
-print("rlog transformation")
+# normalization with DESeq2 estimated size factors (ESF, median of ratios to geometric mean): write tables ####
+print("normalizing counts with estimated size factors")
 
-rld <- rlog(dds, blind=FALSE)
-rlog <- as_tibble(assay(rld)) %>%
+# median of ratios
+ESF <- as.data.frame(counts(dds, normalized=T)) %>%
+  mutate(Geneid = row.names(.)) %>%
+  dplyr::select(Geneid, everything())
+
+# average replicates
+ESF_avg <- ESF %>%
+  pivot_longer(cols = -Geneid, names_to = "sample", values_to = "expression") %>%
+  mutate(condition = str_replace(sample, "_R\\d+$", "")) %>% # remove the _R + number suffix
+  group_by(Geneid, condition) %>%
+  summarise(average_expression = mean(expression), .groups = 'drop') %>% # average expression
+  pivot_wider(names_from = condition, values_from = average_expression, names_sort = T)
+
+# write table of library-size normalized counts
+write.table(x=ESF, file=paste0("normalized_counts/ESF.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+write.table(x=ESF_avg, file=paste0("normalized_counts/ESF_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+
+#
+# variance-stabilizing transformation (VST): write tables ####
+
+print("export variance-stabilized counts")
+
+vsd <- as_tibble(assay(vsd)) %>%
   mutate(Geneid = row.names(assay(dds))) %>%
   dplyr::select(Geneid, everything())
 
-# long format
-rlog_avg <- rlog %>%
+# average replicates
+vsd_avg <- vsd %>%
   pivot_longer(cols = -Geneid, names_to = "sample", values_to = "expression") %>%
   mutate(condition = str_replace(sample, "_R\\d+$", "")) %>% # remove the _R + number suffix
   group_by(Geneid, condition) %>%
@@ -346,8 +354,29 @@ rlog_avg <- rlog %>%
   pivot_wider(names_from = condition, values_from = average_expression, names_sort = T)
 
 # write tables
-write.table(x=rlog, file=paste0("normalized_counts/rlog.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-write.table(x=rlog_avg, file=paste0("normalized_counts/rlog_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+write.table(x=vsd, file=paste0("normalized_counts/vst.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+write.table(x=vsd_avg, file=paste0("normalized_counts/vst_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+
+#
+# regularized-log transformation (rlog): write tables ####
+print("rlog transformation")
+
+rld <- rlog(dds, blind=FALSE)
+rld <- as_tibble(assay(rld)) %>%
+  mutate(Geneid = row.names(assay(dds))) %>%
+  dplyr::select(Geneid, everything())
+
+# average replicates
+rld_avg <- rld %>%
+  pivot_longer(cols = -Geneid, names_to = "sample", values_to = "expression") %>%
+  mutate(condition = str_replace(sample, "_R\\d+$", "")) %>% # remove the _R + number suffix
+  group_by(Geneid, condition) %>%
+  summarise(average_expression = mean(expression), .groups = 'drop') %>%
+  pivot_wider(names_from = condition, values_from = average_expression, names_sort = T)
+
+# write tables
+write.table(x=rld, file=paste0("normalized_counts/rlog.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+write.table(x=rld_avg, file=paste0("normalized_counts/rlog_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
 
 #
 # functions to extract pairwise comparisons and DEGs ####
@@ -442,7 +471,7 @@ down_TEs_intersect_filter <- function(res, TE_df, feature_df) {
   
   # return geneids for significant DEGs
   down_TEs <- row.names(res[row.names(res) %in% TE_geneids & res$log2FoldChange <=-1 & !is.na(res$padj) & res$padj < 0.1,])
-  down_features <- row.names(res[row.names(res) %in% feature_geneids & res$log2FoldChange >=1 & !is.na(res$padj) & res$padj < 0.1,])
+  down_features <- row.names(res[row.names(res) %in% feature_geneids & res$log2FoldChange <=-1 & !is.na(res$padj) & res$padj < 0.1,])
   
   # filter out:
   # - TEs down in sense that have 1 bp overlap or more with a PCG in the same orientation
@@ -486,97 +515,66 @@ DEGs <- list(
 ## write DEG tables with normalized counts
 DEG_write_tables <- function(x, y) {
   
-  # create output directory
+  # Create output directory
   output_dir <- paste0("../06_DESeq2/batch_DEGs/", y)
-  dir.create(output_dir, showWarnings = F, recursive = T)
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
   
-  # RPM with individual replicates
-  df_RPM <- RPM_merged %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_RPM, file=paste0(output_dir, "/batch_", y, "_RPM.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+  # Helper function to write tables
+  write_table <- function(data, suffix) {
+    df <- data %>%
+      filter(Geneid %in% x) %>%
+      left_join(Araport11_annotations, by = "Geneid")
+    write.table(df, file = paste0(output_dir, "/batch_", y, suffix), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+  }
   
-  # RPM with averaged replicates
-  df_RPM_mean <- RPM_merged_avg %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_RPM_mean, file=paste0(output_dir, "/batch_", y, "_RPM_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  
-  # rlog with individual replicates
-  df_rlog <- rlog %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_rlog, file=paste0(output_dir, "/batch_", y, "_rlog.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  
-  # rlog with averaged replicates
-  df_rlog_mean <- rlog_avg %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_rlog_mean, file=paste0(output_dir, "/batch_", y, "_rlog_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  
-  # ESF with individual replicates
-  df_ESF <- ESF %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_ESF, file=paste0(output_dir, "/batch_", y, "_ESF.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  
-  # ESF with averaged replicates
-  df_ESF_avg <- ESF_avg %>%
-    filter(Geneid %in% x) %>%
-    left_join(Araport11_annotations, by="Geneid")
-  write.table(df_ESF_avg, file=paste0(output_dir, "/batch_", y, "_ESF_averaged.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+  # Write all required tables
+  write_table(RPM_merged, "_RPM.tsv")
+  write_table(RPM_merged_avg, "_RPM_averaged.tsv")
+  write_table(ESF, "_ESF.tsv")
+  write_table(ESF_avg, "_ESF_averaged.tsv")
+  write_table(vsd, "_VST.tsv")
+  write_table(vsd_avg, "_VST_averaged.tsv")
+  write_table(rld, "_rlog.tsv")
+  write_table(rld_avg, "_rlog_averaged.tsv")
 }
 
-mapply(FUN = DEG_write_tables, x=DEGs, y=names(DEGs))
+# Apply the function to the list of DEGs
+mapply(FUN = DEG_write_tables, x = DEGs, y = names(DEGs))
 
-# write number of batch DEGs
+
+## write number of batch DEGs
 write.table(x=t(as.data.frame(lapply(DEGs, FUN=length))), file=paste0(output_dir, "batch_DEGs/number_of_batch_DEGs.tsv"), quote = F, sep="\t", row.names=T, col.names=F)
 
 ## write heatmaps for batch DEGs
 
+# Helper function to generate heatmaps
+generate_heatmaps <- function(DEG_list, suffix, data, select_cols, method) {
+  print(paste("DEGs found in batch mode:", method))
+  
+  mapply(
+    FUN = DEG_heatmap,
+    x = DEG_list,
+    y = paste0(names(DEG_list), suffix),
+    output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEG_list)),
+    MoreArgs = list(z = data %>% dplyr::select(Geneid, one_of(select_cols)), n = method)
+  )
+}
+
 # RPM
-print("DEGs found in batch mode: RPM")
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_RPM.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=RPM_merged %>% dplyr::select(Geneid, one_of(samples$full_name)), n = "RPM") )
-
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_RPM_averaged.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=RPM_merged_avg %>% dplyr::select(Geneid, one_of(c(reference_condition, conditions))), n = "RPM") )
-
-
-# rlog
-print("DEGs found in batch mode: rlog")
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_rlog.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=rlog %>% dplyr::select(Geneid, one_of(samples$full_name)), n = "rlog") )
-
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_rlog_averaged.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=rlog_avg %>% dplyr::select(Geneid, one_of(c(reference_condition, conditions))), n = "rlog") )
-
+generate_heatmaps(DEGs, "_RPM.pdf", RPM_merged, samples$full_name, "RPM")
+generate_heatmaps(DEGs, "_RPM_averaged.pdf", RPM_merged_avg, c(reference_condition, conditions), "RPM")
 
 # ESF
-print("DEGs found in batch mode: ESF")
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_ESF.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=ESF %>% dplyr::select(Geneid, one_of(samples$full_name)), n = "ESF") )
+generate_heatmaps(DEGs, "_ESF.pdf", ESF, samples$full_name, "ESF")
+generate_heatmaps(DEGs, "_ESF_averaged.pdf", ESF_avg, c(reference_condition, conditions), "ESF")
 
-mapply(FUN = DEG_heatmap
-       , x=DEGs
-       , y=paste0(names(DEGs), "_ESF_averaged.pdf")
-       , output_dir = paste0("../06_DESeq2/batch_DEGs/", names(DEGs))
-       , MoreArgs = list(z=ESF_avg %>% dplyr::select(Geneid, one_of(c(reference_condition, conditions))), n = "ESF") )
+# VST
+generate_heatmaps(DEGs, "_VST.pdf", vsd, samples$full_name, "VST")
+generate_heatmaps(DEGs, "_VST_averaged.pdf", vsd_avg, c(reference_condition, conditions), "VST")
+
+# rlog
+generate_heatmaps(DEGs, "_rlog.pdf", rld, samples$full_name, "rlog")
+generate_heatmaps(DEGs, "_rlog_averaged.pdf", rld_avg, c(reference_condition, conditions), "rlog")
 
 #
 # all pairwise comparisons of treated vs control: export tables and heatmaps ####
@@ -628,7 +626,7 @@ DEG_nb_long <- DEG_nb %>%
   mutate(treatment = factor(treatment, levels = unique(samples$condition)))
 
 # plot the data as barplots using ggplot
-ggplot(DEG_nb_long, aes(x = treatment, y = number_of_DEGs, fill = DEG)) +
+barplot_DEGs <- ggplot(DEG_nb_long, aes(x = treatment, y = number_of_DEGs, fill = DEG)) +
 geom_bar(stat = "identity") +
 theme_minimal() +
 theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -640,69 +638,59 @@ facet_wrap(~DEG, scales = "free_y", ncol=1)
 
 # save the plot
 plot_width <- 2 + 0.15 * length(unique(samples$condition))
-ggsave(filename = paste0(output_dir, "default_plots/number_of_DEGs.pdf"), width = plot_width, height = 8)
+ggsave(plot = barplot_DEGs, filename = paste0(output_dir, "default_plots/number_of_DEGs.pdf"), width = plot_width, height = 8)
 
 ## export up and down TEs / genes
 
 # function to export tables of normalized counts and heatmaps for a given set of DEGs
 export_DEGs_pairwise <- function(x, name, DEG_list, DEG_type) {
   
-  # x is the input dataframe
-  # name is the sample name
-  # DEG_list is a vector of DEGs
-  # DEG_type is a suffix for the output tsv file 
+  # Create output directory
+  output_dir_pairwise <- file.path(output_dir, "pairwise_comparisons", paste0(name, "_vs_", reference_condition))
+  dir.create(output_dir_pairwise, showWarnings = FALSE, recursive = TRUE)
+  dir.create(file.path(output_dir_pairwise, "all_replicates"), showWarnings = FALSE, recursive = TRUE)
   
-  # create output directory
-  output_dir_pairwise <- paste0(output_dir, "pairwise_comparisons/", name, "_vs_", reference_condition)
-  dir.create(output_dir_pairwise, showWarnings = F, recursive = T)
-  dir.create(paste0(output_dir_pairwise, "/all_replicates/"), showWarnings = F, recursive = T)
-  
-  # prepare the dataframe
+  # Prepare the dataframe with Geneid and annotations
   z <- as.data.frame(x) %>%
-    mutate(Geneid = row.names(x)) %>%  # add Geneid column
-    dplyr::select(Geneid, everything()) %>% # bring Geneid back as the first column
-    dplyr::filter(Geneid %in% DEG_list) %>% # filter only DEGs
-    left_join(Araport11_annotations, by="Geneid") # add annotations
-
-  # export with ESF (DESeq2 normalized counts)
-  write.table(z %>% left_join(ESF_avg, by="Geneid")
-              , file=paste0(output_dir_pairwise, "/", name, "_vs_", reference_condition, "_", DEG_type, "_normalized_counts.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  # export with rlog transformed counts
-  write.table(z %>% left_join(rlog_avg, by="Geneid")
-              , file=paste0(output_dir_pairwise, "/", name, "_vs_", reference_condition, "_", DEG_type, "_rlog.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+    mutate(Geneid = rownames(x)) %>%
+    select(Geneid, everything()) %>%
+    filter(Geneid %in% DEG_list) %>%
+    left_join(Araport11_annotations, by = "Geneid")
   
-  # write heatmaps with ESF
-  DEG_heatmap(x = DEG_list
-              , y = paste0(name, "_vs_", reference_condition, "_", DEG_type, "_normalized_counts_heatmap.pdf")
-              , z = ESF_avg, n = "ESF"
-              , output_dir = paste0(output_dir_pairwise, "/"))  
+  # Helper function to export tables
+  export_table <- function(data, suffix, directory) {
+    write.table(data, file = file.path(directory, paste0(name, "_vs_", reference_condition, "_", DEG_type, suffix)), 
+                quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+  }
   
-  # write heatmaps with rlog
-  DEG_heatmap(x = DEG_list
-              , y = paste0(name, "_vs_", reference_condition, "_", DEG_type, "_rlog_heatmap.pdf")
-              , z = rlog_avg, n = "rlog"
-              , output_dir = paste0(output_dir_pairwise, "/"))
+  # Helper function to generate heatmaps
+  generate_heatmap <- function(data, file_suffix, normalization, directory) {
+    DEG_heatmap(
+      x = DEG_list,
+      y = paste0(name, "_vs_", reference_condition, "_", DEG_type, file_suffix),
+      z = data, 
+      n = normalization, 
+      output_dir = directory
+    )
+  }
   
-  ## repeat the same code except here we output all replicates instead of the average
+  # Export normalized counts and generate heatmaps for averaged data
+  export_table(z %>% left_join(ESF_avg, by = "Geneid"), "_normalized_counts.tsv", output_dir_pairwise)
+  export_table(z %>% left_join(vsd_avg, by = "Geneid"), "_VST.tsv", output_dir_pairwise)
+  export_table(z %>% left_join(rld_avg, by = "Geneid"), "_rlog.tsv", output_dir_pairwise)
   
-  # export with ESF (DESeq2 normalized counts)
-  write.table(z %>% left_join(ESF, by="Geneid")
-              , file=paste0(output_dir_pairwise, "/all_replicates/", name, "_vs_", reference_condition, "_", DEG_type, "_normalized_counts_all_replicates.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
-  # export with rlog transformed counts
-  write.table(z %>% left_join(rlog, by="Geneid")
-              , file=paste0(output_dir_pairwise, "/all_replicates/", name, "_vs_", reference_condition, "_", DEG_type, "_rlog_all_replicates.tsv"), quote = F, sep="\t", row.names=F, col.names=T)
+  generate_heatmap(ESF_avg, "_normalized_counts_heatmap.pdf", "ESF", output_dir_pairwise)
+  generate_heatmap(vsd_avg, "_VST_heatmap.pdf", "VST", output_dir_pairwise)
+  generate_heatmap(rld_avg, "_rlog_heatmap.pdf", "rlog", output_dir_pairwise)
   
-  # write heatmaps with ESF
-  DEG_heatmap(x = DEG_list
-              , y = paste0(name, "_vs_", reference_condition, "_", DEG_type, "_normalized_counts_all_replicates_heatmap.pdf")
-              , z = ESF, n = "ESF"
-              , output_dir = paste0(output_dir_pairwise, "/all_replicates/"))
+  # Export normalized counts and generate heatmaps for all replicates
+  export_table(z %>% left_join(ESF, by = "Geneid"), "_normalized_counts_all_replicates.tsv", file.path(output_dir_pairwise, "all_replicates"))
+  export_table(z %>% left_join(vsd, by = "Geneid"), "_VST_all_replicates.tsv", file.path(output_dir_pairwise, "all_replicates"))
+  export_table(z %>% left_join(rld, by = "Geneid"), "_rlog_all_replicates.tsv", file.path(output_dir_pairwise, "all_replicates"))
   
-  # write heatmaps with rlog
-  DEG_heatmap(x = DEG_list
-              , y = paste0(name, "_vs_", reference_condition, "_", DEG_type, "_rlog_all_replicates_heatmap.pdf")
-              , z = rlog, n = "rlog"
-              , output_dir = paste0(output_dir_pairwise, "/all_replicates/"))
+  generate_heatmap(ESF, "_normalized_counts_all_replicates_heatmap.pdf", "ESF", file.path(output_dir_pairwise, "all_replicates"))
+  generate_heatmap(vsd, "_VST_all_replicates_heatmap.pdf", "VST", file.path(output_dir_pairwise, "all_replicates"))
+  generate_heatmap(rld, "_rlog_all_replicates_heatmap.pdf", "rlog", file.path(output_dir_pairwise, "all_replicates"))
 }
 
 # apply the function to all pairwise comparisons
