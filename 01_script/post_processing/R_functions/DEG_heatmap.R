@@ -11,7 +11,7 @@ DEG_heatmap <- function(x, y, z, n, output_dir) {
   
   if (is.vector(x)==T) {
     if (length(x) > 3) {
-      if (n=="rlog") {
+      if (n %in% c("rlog", "VST")) {
         sampleDistMatrix <- as.matrix(as.data.frame(z[z$Geneid %in% x,-which(names(z) == "Geneid")]))
         title <- paste0(y, "\nn=", length(x),"\n", n)
       }
