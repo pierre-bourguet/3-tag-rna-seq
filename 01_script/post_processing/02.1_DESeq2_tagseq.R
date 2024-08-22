@@ -21,10 +21,18 @@ args <- c(
 )
 
 args <- c(
-  "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE_150bp_3M_min_50bp/02_counts/",
+  "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE_150bp_3M_min_50bp_unique_mappers/02_counts/",
   "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4",
   "none",
   "../../03_sample_lists/sample_list_tagseq_03_cdca7.tsv",
+  "WT"
+)
+
+args <- c(
+  "../../04_output/tagseq_03_cdca7_complementation_AtRTD3_ATTE_150bp_3M_min_50bp_unique_mappers_DESeq2_rerun/02_counts/",
+  "WT_R6,cdca7_ab_R1,cdca7_ab_R6,cdca7_ab_dCter_R4",
+  "none",
+  "../../03_sample_lists/sample_list_tagseq_03_cdca7_individualized.tsv",
   "WT"
 )
 
@@ -175,10 +183,10 @@ print("importing sample information")
 
 # import sample info
 samples <- read_tsv(paste0(current_dir, "/", sample_info_file), col_names = c("path", "full_name"), show_col_types = FALSE)[,2] %>%
-  mutate(sample = str_extract(full_name, "R\\d+$")) %>%
+  mutate(replicate = str_extract(full_name, "R\\d+$")) %>%
   mutate(condition = str_remove(full_name, "_R\\d+$")) %>%
   # re order by alphabetical order
-  dplyr::arrange(condition, sample, .locale = "en")
+  dplyr::arrange(condition, replicate, .locale = "en")
 
 # Remove outliers
 samples <- samples %>%
@@ -187,7 +195,7 @@ samples <- samples %>%
       !str_detect(full_name, paste(outlier_patterns, collapse = "|"))
   )
 
-sample_columns <- which(names(counts_merged) %in% paste(samples$condition, samples$sample, sep = "_"))  # Retrieve columns that contain sample names
+sample_columns <- which(names(counts_merged) %in% paste(samples$condition, samples$replicate, sep = "_"))  # Retrieve columns that contain sample names
 
 #
 # run DESeq2 ####
