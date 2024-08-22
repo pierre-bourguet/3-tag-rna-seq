@@ -395,7 +395,6 @@ f <- function(aa, bb) { # this creates a res_mutant dataframe comparing mutant v
                    , list(a = aa, b = bb))) # this second argument provides an environment for substitute, defining variables used in previous line
 }
 
-
 # functions to extract up or down DEGs for annotations of interest
 up <- function(res, annotations) {
   
@@ -586,9 +585,12 @@ generate_heatmaps(DEGs, "_rlog_averaged.pdf", rld_avg, c(reference_condition, co
 
 #
 # all pairwise comparisons of treated vs control: export tables and heatmaps ####
+
 print("all pairwise comparisons: export tables and heatmaps")
 
-## export the entire DESeq2 table for each pairwise comparison
+## DESeq2 tables
+
+# export the entire DESeq2 table for each pairwise comparison
 
 export_all_pairwise <- function(x, y) {
   
@@ -612,6 +614,22 @@ export_all_pairwise <- function(x, y) {
 mapply(x = all_res
        , y = gsub("res_", "", names(all_res))
        , FUN = export_all_pairwise)
+
+# export log2FC for all samples
+
+# Use map_dfc to extract log2FoldChange and combine into a single data frame
+log2FC_df <- as_tibble(
+  map_dfc(all_res, ~ as.data.frame(.x) %>% select(log2FoldChange))
+  ) %>%
+  # rename columns
+  rename_with(~ gsub("res_", "", names(all_res))) %>%
+  # add Geneid and put it as the first column
+  mutate(Geneid = vsd$Geneid) %>%
+  select(Geneid, everything())
+
+# export
+write.table(log2FC_df, file="normalized_counts/log2FC.tsv", quote = F, sep="\t", row.names=F, col.names=T)
+
 
 ## number of DEGs for each pairwise comparison
 
