@@ -1,12 +1,12 @@
 # Overview
 
-This pipeline is meant to analyze short-read transcriptome libraries built with a custom protocol established by Yoav Voichek and Pieter Clauw in the Nordborg lab.
-In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer, RNA:cDNA duplexes are cleaved by Tn5, PCR amplifies the 3' ends of transcripts and adds Illumina adapters for sequencing. Further details of the library construction protocol can be found here:
+This pipeline is designed for the analysis of customized short-read 3' end transcriptome libraries.
+In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer and RNA:cDNA duplexes are then cleaved by Tn5. PCR amplification targets the 3' ends of the transcripts and simultaneously adds Illumina adapters for sequencing. A barcode and a unique molecular identifier (UMI) are introduced with the RT primer, while two additional barcodes are added during the PCR step. Further details of the library construction protocol can be found in the methods section of the following pre-print:
 
-http://UPDATELINKLATER
+https://doi.org/10.1101/2024.05.06.590709
 
 The pipeline does the following:
-- trim reads in 3' to remove adapters, polyA, low quality base calls, reads shorter than 50bp
+- trim reads in 3' to remove adapters, polyA, low quality base calls. Reads shorter than 50bp after trimming are discarded
 - collapse duplicates based on 8-bp UMIs (mismatch allowed: 0 for UMIs, 2 in the transcript)
 - randomly subsample to a given number of reads (default: 10 millions)
 - create indexes based on provided genome files
