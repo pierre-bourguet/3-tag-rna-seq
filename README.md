@@ -1,7 +1,7 @@
 # Overview
 
 This pipeline is designed for the analysis of customized short-read 3' end transcriptome libraries.
-In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer and RNA:cDNA duplexes are then cleaved by Tn5. PCR amplification targets the 3' ends of the transcripts and simultaneously adds Illumina adapters for sequencing. A barcode and a unique molecular identifier (UMI) are introduced with the RT primer, while two additional barcodes are added during the PCR step. Further details of the library construction protocol can be found in the methods section of the following pre-print:
+In short, messenger RNAs are reverse-transcribed using a oligo d(T) primer and RNA:cDNA duplexes are then cleaved by Tn5. PCR amplification targets the 3' ends of the transcripts and simultaneously adds Illumina adapters for sequencing. A barcode and a unique molecular identifier (UMI) are introduced with the oligo d(T) primer, while two additional barcodes are added during the PCR step. Further details of the library construction protocol can be found in the methods section of the following pre-print:
 
 https://doi.org/10.1101/2024.05.06.590709
 
