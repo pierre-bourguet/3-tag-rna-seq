@@ -11,14 +11,18 @@ echo -n "Geneid" > header_sense
 echo -n "Geneid" > header_antisense
 echo -n "Geneid" > header_star_sense
 echo -n "Geneid" > header_star_antisense
+echo -n "Geneid" > header_unique_star_sense
+echo -n "Geneid" > header_unique_star_antisense
 
 # Find one template sample file to extract the Geneid column
 salmon_template=$(find . -path '*quant*' -not -path '*STAR_mapping*' -name 'quant.sf' | head -1)
 star_template=$(find . -path '*quant*' -not -path '*/quant_*/*' -name 'quant.sf' -o -path '*/STAR_mapping*/*' -name 'quant.sf' | head -1)
+unique_star_template=$(find . -path '*quant*' -not -path '*/quant_*/*' -name 'quant.sf' -o -path '*/unique_STAR_mapping*/*' -name 'quant.sf' | head -1)
 
 # Extract the Geneid column from the salmon & star template file
 tail -n+2 "$salmon_template" | cut -f1 | sed 's/\.1$//' > salmon_counts.tsv
 tail -n+2 "$star_template" | cut -f1 | sed 's/\.1$//' > star_counts.tsv
+tail -n+2 "$unique_star_template" | cut -f1 | sed 's/\.1$//' > unique_star_counts.tsv
 
 # Copy Geneid column
 cp salmon_counts.tsv salmon_counts_AS.tsv
@@ -29,11 +33,17 @@ cp star_counts.tsv star_counts_AS.tsv
 cp star_counts.tsv star_RPM.tsv
 cp star_counts.tsv star_RPM_AS.tsv
 
+cp unique_star_counts.tsv unique_star_counts_AS.tsv
+cp unique_star_counts.tsv unique_star_RPM.tsv
+cp unique_star_counts.tsv unique_star_RPM_AS.tsv
+
 # Prepare associative arrays to hold sample names and file paths for sense and antisense
 declare -A sample_paths_sense=()
 declare -A sample_paths_antisense=()
 declare -A star_sample_paths_sense=()
 declare -A star_sample_paths_antisense=()
+declare -A unique_star_sample_paths_sense=()
+declare -A unique_star_sample_paths_antisense=()
 
 # Collect all quant.sf files and corresponding sample names, separating those in folders starting with "STAR"
 while read -r quant_file; do
@@ -45,6 +55,12 @@ while read -r quant_file; do
             star_sample_paths_antisense["$sample_name"]="$quant_file"
         else
             star_sample_paths_sense["$sample_name"]="$quant_file"
+        fi
+    elif [[ "$sample_name" == unique* ]]; then
+        if [[ "$sample_name" == *_AS ]]; then
+            unique_star_sample_paths_antisense["$sample_name"]="$quant_file"
+        else
+            unique_star_sample_paths_sense["$sample_name"]="$quant_file"
         fi
     else
         if [[ "$sample_name" == *_AS ]]; then
@@ -115,6 +131,38 @@ for sample_name in $(echo "${!star_sample_paths_antisense[@]}" | tr ' ' '\n' | s
 
 done
 
+
+# Sort sample names and process files in sorted order for unique STAR sense
+echo -e "\n$(date) . . . Sort sample names and process files in sorted order for unique STAR sense . . . "
+
+for sample_name in $(echo "${!unique_star_sample_paths_sense[@]}" | tr ' ' '\n' | sort); do
+    quant_file=${unique_star_sample_paths_sense[$sample_name]}
+
+    # Add the sample name to the unique STAR sense header with a tab separator
+    echo -ne "\t$sample_name" >> header_unique_star_sense
+
+    # Add the corresponding counts and RPM values to the unique STAR sense summary files
+    awk 'NR > 1 {print $5}' "$quant_file" | paste unique_star_counts.tsv - > tmp && mv tmp unique_star_counts.tsv
+    awk 'NR > 1 {print $4}' "$quant_file" | paste unique_star_RPM.tsv - > tmp && mv tmp unique_star_RPM.tsv
+
+done
+
+# Sort sample names and process files in sorted order for unique STAR antisense
+echo -e "\n$(date) . . . Sort sample names and process files in sorted order for unique STAR antisense . . . "
+
+for sample_name in $(echo "${!unique_star_sample_paths_antisense[@]}" | tr ' ' '\n' | sort); do
+    quant_file=${unique_star_sample_paths_antisense[$sample_name]}
+
+    # Add the sample name to the unique STAR antisense header with a tab separator
+    echo -ne "\t$sample_name" >> header_unique_star_antisense
+
+    # Add the corresponding counts and RPM values to the unique STAR antisense summary files
+    awk 'NR > 1 {print $5}' "$quant_file" | paste unique_star_counts_AS.tsv - > tmp && mv tmp unique_star_counts_AS.tsv
+    awk 'NR > 1 {print $4}' "$quant_file" | paste unique_star_RPM_AS.tsv - > tmp && mv tmp unique_star_RPM_AS.tsv
+
+done
+
+
 echo -e "\n$(date) . . . format counts and RPM files . . . "
 
 # Add a new line at the end of the headers
@@ -122,12 +170,16 @@ echo "" >> header_sense
 echo "" >> header_antisense
 echo "" >> header_star_sense
 echo "" >> header_star_antisense
+echo "" >> header_unique_star_sense
+echo "" >> header_unique_star_antisense
 
 # remove the quant_ prefix from headers
 sed -i 's/quant_//g' header_sense
 sed -i 's/quant_//g' header_antisense
 sed -i 's/STAR_mapping_salmon_quant_//g' header_star_sense
 sed -i 's/STAR_mapping_salmon_quant_//g' header_star_antisense
+sed -i 's/unique_STAR_mapping_salmon_quant_//g' header_unique_star_sense
+sed -i 's/unique_STAR_mapping_salmon_quant_//g' header_unique_star_antisense
 
 # Combine headers and data files
 cat header_sense salmon_counts.tsv > tmp && mv tmp ../salmon_counts.tsv
@@ -142,9 +194,25 @@ cat header_star_sense star_RPM.tsv > tmp && mv tmp ../normalized_counts/no_filte
 cat header_star_antisense star_counts_AS.tsv > tmp && mv tmp ../star_counts_AS.tsv
 cat header_star_antisense star_RPM_AS.tsv > tmp && mv tmp ../normalized_counts/no_filter_no_transcript_merge/star_RPM_AS.tsv
 
+cat header_unique_star_sense unique_star_counts.tsv > tmp && mv tmp ../unique_star_counts.tsv
+cat header_unique_star_sense unique_star_RPM.tsv > tmp && mv tmp ../normalized_counts/no_filter_no_transcript_merge/unique_star_RPM.tsv
+
+cat header_unique_star_antisense unique_star_counts_AS.tsv > tmp && mv tmp ../unique_star_counts_AS.tsv
+cat header_unique_star_antisense unique_star_RPM_AS.tsv > tmp && mv tmp ../normalized_counts/no_filter_no_transcript_merge/unique_star_RPM_AS.tsv
+
 # Cleanup
-rm header_sense header_antisense header_star_sense header_star_antisense
+rm header_sense header_antisense header_star_sense header_star_antisense header_unique_star_sense header_unique_star_antisense
 rm *tsv
+
+# Replace the last two genes (the two transgene cDNAs) with unique counts
+# in sense
+head -n -2 star_counts.tsv > temp_star_counts.tsv
+tail -n 2 unique_star_counts.tsv >> temp_star_counts.tsv
+mv temp_star_counts.tsv star_counts.tsv
+# in antisense
+head -n -2 star_counts_AS.tsv > temp_star_counts_AS.tsv
+tail -n 2 unique_star_counts_AS.tsv >> temp_star_counts_AS.tsv
+mv temp_star_counts_AS.tsv star_counts_AS.tsv
 
 ############################## collect salmon & STAR alignment rates
 
