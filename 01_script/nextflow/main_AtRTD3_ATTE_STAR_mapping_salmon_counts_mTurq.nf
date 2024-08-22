@@ -364,21 +364,26 @@ process quantify_exp_STAR_mapping {
 	time '1h'
 	memory { 24.GB + 24.GB * task.attempt }
 	errorStrategy 'retry'
-	module 'build-env/f2022:salmon/1.10.1-gcc-12.2.0'
+	module 'build-env/f2022:salmon/1.10.1-gcc-12.2.0:samtools/1.18-gcc-12.2.0'
 
-	publishDir "${params.outdir}/02_counts/samples/${sample_name}", mode: 'copy', pattern: '{STAR_mapping_salmon_quant}*'
+	publishDir "${params.outdir}/02_counts/samples/${sample_name}", mode: 'copy', pattern: '*{STAR_mapping_salmon_quant}*'
 
 	input:
     tuple val(sample_name), path (bamfile)
     val cdna
 
 	output:
-	path("STAR_mapping_salmon_quant*")
+	path("*STAR_mapping_salmon_quant*")
 
 	script:
 	"""
+    # quantify including multimapping reads
     salmon quant -p 8 -l SF -t $cdna -a $bamfile -o STAR_mapping_salmon_quant_${sample_name} --noLengthCorrection
 	salmon quant -p 8 -l SR -t $cdna -a $bamfile -o STAR_mapping_salmon_quant_${sample_name}_AS --noLengthCorrection
+    # filter out multimapping reads
+    samtools view --bam -q 255 $bamfile > unique_${bamfile}
+    salmon quant -p 8 -l SF -t $cdna -a unique_${bamfile} -o unique_STAR_mapping_salmon_quant_${sample_name} --noLengthCorrection
+	salmon quant -p 8 -l SR -t $cdna -a unique_${bamfile} -o unique_STAR_mapping_salmon_quant_${sample_name}_AS --noLengthCorrection
 	"""
 }
 
