@@ -72,7 +72,7 @@ while read -r quant_file; do
 done < <(find . -path '*quant*' -name 'quant.sf')
 
 # Sort sample names and process files in sorted order for sense
-echo -e "\n$(date) . . . Sort sample names and process files in sorted order for sense . . . "
+echo -e "\n$(date) . . . Sort sample names and process files in sorted order for salmon sense . . . "
 
 for sample_name in $(echo "${!sample_paths_sense[@]}" | tr ' ' '\n' | sort); do
     quant_file=${sample_paths_sense[$sample_name]}
@@ -87,7 +87,7 @@ for sample_name in $(echo "${!sample_paths_sense[@]}" | tr ' ' '\n' | sort); do
 done
 
 # Sort sample names and process files in sorted order for antisense
-echo -e "\n$(date) . . . Sort sample names and process files in sorted order for antisense . . . "
+echo -e "\n$(date) . . . Sort sample names and process files in sorted order for salmon antisense . . . "
 
 for sample_name in $(echo "${!sample_paths_antisense[@]}" | tr ' ' '\n' | sort); do
     quant_file=${sample_paths_antisense[$sample_name]}
@@ -205,6 +205,7 @@ rm header_sense header_antisense header_star_sense header_star_antisense header_
 rm *tsv
 
 # Replace the last two genes (the two transgene cDNAs) with unique counts
+cd ../
 # in sense
 head -n -2 star_counts.tsv > temp_star_counts.tsv
 tail -n 2 unique_star_counts.tsv >> temp_star_counts.tsv
@@ -218,7 +219,7 @@ mv temp_star_counts_AS.tsv star_counts_AS.tsv
 
 echo -e "\n$(date) . . . creating STAR mapping summary file . . .\n"
 
-cd ../../01_QC
+cd ../01_QC
 touch tmp_STAR tmp_header
 for i in STAR_logs_and_QC/*Log.final.out; do
     basename ${i%Log.final.out} >> tmp_header
