@@ -206,14 +206,19 @@ rm *tsv
 
 # Replace the last two genes (the two transgene cDNAs) with unique counts
 cd ../
-# in sense
-head -n -2 star_counts.tsv > temp_star_counts.tsv
-tail -n 2 unique_star_counts.tsv >> temp_star_counts.tsv
-mv temp_star_counts.tsv star_counts.tsv
-# in antisense
-head -n -2 star_counts_AS.tsv > temp_star_counts_AS.tsv
-tail -n 2 unique_star_counts_AS.tsv >> temp_star_counts_AS.tsv
-mv temp_star_counts_AS.tsv star_counts_AS.tsv
+
+# only execute if the transgenes are present in the counts files
+if grep -q "mTurq" star_counts.tsv; then
+    # In sense
+    head -n -2 star_counts.tsv > temp_star_counts.tsv
+    tail -n 2 unique_star_counts.tsv >> temp_star_counts.tsv
+    mv temp_star_counts.tsv star_counts.tsv
+    
+    # In antisense
+    head -n -2 star_counts_AS.tsv > temp_star_counts_AS.tsv
+    tail -n 2 unique_star_counts_AS.tsv >> temp_star_counts_AS.tsv
+    mv temp_star_counts_AS.tsv star_counts_AS.tsv
+fi
 
 ############################## collect salmon & STAR alignment rates
 
