@@ -36,6 +36,14 @@ args <- c(
   "WT"
 )
 
+args <- c(
+  "../../04_output/tagseq_05_ddm1_EMS_mutants/02_counts/",
+  "none",
+  "none",
+  "../../03_sample_lists/sample_list_tagseq_05_kanno_ddm1_EMS.tsv",
+  "WT_16_101"
+)
+
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
 base_dir <- args[1]
