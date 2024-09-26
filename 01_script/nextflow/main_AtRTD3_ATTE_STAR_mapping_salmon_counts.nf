@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 // Define a process parameter for the numerical argument
-params.max_n_read = params.max_n_read ?: 10000000
+params.max_n_read = params.max_n_read ?: 100000000
 
 // Access the argument in the code
 def myArg = params.max_n_read
