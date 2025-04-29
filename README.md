@@ -12,7 +12,7 @@ The pipeline does the following:
 - create indexes based on provided genome files
 - map with STAR
 - output bigwig files, stranded or unstranded, including or excluding multi-mapping reads
-- quantify sense and antisense reads with Salmon in alignment-mode
+- quantify sense and antisense reads with Salmon in alignment-mode (output file is star_counts.tsv). Also does pseudomapping & counting with salmon, ignoring STAR alignment (output file is salmon_counts.tsv).
 - generate plots to inspect quality metrics: multiplexing, trimming, duplicates, multiQC, sample to sample correlation
 - analyze differential gene expression with DESeq2, producing tables of differentially expressed genes, heatmaps, barplots, PCA
 
