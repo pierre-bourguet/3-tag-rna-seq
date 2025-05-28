@@ -664,7 +664,7 @@ barplot_DEGs <- ggplot(DEG_nb_long, aes(x = treatment, y = number_of_DEGs, fill 
 geom_bar(stat = "identity") +
 theme_minimal() +
 theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-labs(title = "Number of DEGs for each pairwise comparison", x = "treatment", y = "Number of DEGs") +
+labs(title = "Number of DEGs for each\npairwise comparison", x = "treatment", y = "Number of DEGs") +
 theme(
   legend.position = "none"
       , panel.grid.major.x = element_blank() ) +
