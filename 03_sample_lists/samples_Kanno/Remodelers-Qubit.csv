@@ -1,0 +1,31 @@
+Run ID,Assay Name,Test Name,Test Date,Original sample conc.,Units,for 80ng,water,RT primer,new_name
+04/11/2025,RNA High Sensitivity,3rd ddm1-1,11/04/2025 09:47,55.6,ng/uL,1.4,2.6,A6,ddm1_G3_R1
+04/11/2025,RNA High Sensitivity,3rd ddm1-2,11/04/2025 09:47,39.6,ng/uL,2,2,B6,ddm1_G3_R2
+04/11/2025,RNA High Sensitivity,3rd ddm1-3,11/04/2025 09:47,37.2,ng/uL,2.2,1.8,C6,ddm1_G3_R3
+04/11/2025,RNA High Sensitivity,mom1-1,11/04/2025 14:35,52.2,ng/uL,1.5,2.5,D6,mom1_R1
+04/11/2025,RNA High Sensitivity,mom1-2,11/04/2025 14:35,34.4,ng/uL,2.3,1.7,E6,mom1_R2
+04/11/2025,RNA High Sensitivity,mom1-3,11/04/2025 09:47,44.8,ng/uL,1.8,2.2,F6,mom1_R3
+04/11/2025,RNA High Sensitivity,chr11/17-1,11/04/2025 14:35,44.6,ng/uL,1.8,2.2,G6,chr11_17_R1
+04/11/2025,RNA High Sensitivity,chr11/17-2,11/04/2025 09:48,26,ng/uL,3.1,0.9,H6,chr11_17_R2
+04/11/2025,RNA High Sensitivity,chr11/17-3,11/04/2025 14:36,38.2,ng/uL,2.1,1.9,A7,chr11_17_R3
+04/11/2025,RNA High Sensitivity,Col-1,11/04/2025 09:48,19.9,ng/uL,4,0,B7,Col_R1
+04/11/2025,RNA High Sensitivity,Col-2,11/04/2025 09:48,26.8,ng/uL,3,1,C7,Col_R2
+04/11/2025,RNA High Sensitivity,Col-3,11/04/2025 14:36,47.6,ng/uL,1.7,2.3,D7,Col_R3
+04/11/2025,RNA High Sensitivity,chr19-1,11/04/2025 09:48,79.8,ng/uL,1,3,E7,chr19_R1
+04/11/2025,RNA High Sensitivity,chr19-2,11/04/2025 09:48,60.6,ng/uL,1.3,2.7,F7,chr19_R2
+04/11/2025,RNA High Sensitivity,chr19-3,11/04/2025 09:49,77.8,ng/uL,1,3,G7,chr19_R3
+04/11/2025,RNA High Sensitivity,mom/ddm-4,11/04/2025 09:49,40.4,ng/uL,2,2,H7,mom1_ddm1_R1
+04/11/2025,RNA High Sensitivity,mom/ddm-9,11/04/2025 09:49,45.2,ng/uL,1.8,2.2,A8,mom1_ddm1_R2
+04/11/2025,RNA High Sensitivity,mom/ddm-10,11/04/2025 09:49,29.4,ng/uL,2.7,1.3,B8,mom1_ddm1_R3
+04/11/2025,RNA High Sensitivity,ddm/chr11/17-24,11/04/2025 09:49,21.2,ng/uL,3.8,0.2,C8,ddm1_chr11_17_R1
+04/11/2025,RNA High Sensitivity,ddm/chr11/17-31,11/04/2025 15:36,16.1,ng/uL,5,,D8,ddm1_chr11_17_R2
+04/11/2025,RNA High Sensitivity,ddm/chr11/17-32,11/04/2025 15:37,12.9,ng/uL,6.2,,E8,ddm1_chr11_17_R3
+04/11/2025,RNA High Sensitivity,ddm/chr19-1,11/04/2025 09:50,45.4,ng/uL,1.8,2.2,F8,ddm1_chr19_R1
+04/11/2025,RNA High Sensitivity,ddm/chr19-2,11/04/2025 09:50,76.4,ng/uL,1,3,G8,ddm1_chr19_R2
+04/11/2025,RNA High Sensitivity,ddm/chr19-3,11/04/2025 09:50,82.4,ng/uL,1,3,H8,ddm1_chr19_R3
+04/11/2025,RNA High Sensitivity,mom/chr19-1,11/04/2025 09:50,66,ng/uL,1.2,2.8,A9,mom1_chr19_R1
+04/11/2025,RNA High Sensitivity,mom/chr19-2,11/04/2025 09:50,61.2,ng/uL,1.3,2.7,B9,mom1_chr19_R2
+04/11/2025,RNA High Sensitivity,mom/chr19-4,11/04/2025 09:50,46.4,ng/uL,1.7,2.3,C9,mom1_chr19_R3
+04/11/2025,RNA High Sensitivity,mom/chr11/17-6,11/04/2025 14:36,22.8,ng/uL,3.5,0.5,D9,mom1_chr11_17_R1
+04/11/2025,RNA High Sensitivity,mom/chr11/17-7,11/04/2025 14:36,42.4,ng/uL,1.9,2.1,E9,mom1_chr11_17_R2
+04/11/2025,RNA High Sensitivity,mom/chr11/17-8,11/04/2025 14:36,40,ng/uL,2,2,F9,mom1_chr11_17_R3
