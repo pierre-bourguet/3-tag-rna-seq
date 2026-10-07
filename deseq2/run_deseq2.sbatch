@@ -7,26 +7,18 @@
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 
-echo -e "\n$(date) . . . Starting . . ."
+# Usage: sbatch run_deseq2.sbatch <count_dir> <outliers> <outlier_patterns> <sample_sheet> <reference_condition> [--key=value ...]
+#   e.g. sbatch run_deseq2.sbatch <run>/02_counts "WT_R6,mut_R1" "none" <run>/00_demultiplex/samplesheet.csv WT --outdir=<run>/06_DESeq2_subset
+# Arguments and options: see the header of DESeq2_tagseq.R
 
-# importing arguments
-count_dir=$1            # e.g. ../../04_output/tagseq_01_cdca7_mutants_AtRTD3_ATTE_STAR_12/02_counts/
-outliers=$2             # comma separated values of samples to exclude
-outlier_pattern=$3      # comma separated values of samples to exclude based on a pattern
-sample_list=$4          # e.g. ../../03_sample_lists/DESeq2_tagseq_01_cdca7.tsv
-reference_condition=$5  # e.g. Col_0
+# sbatch runs a copy of this script from the spool directory, so its own location cannot be derived from $0
+deseq2_dir=/groups/berger/user/pierre.bourguet/shared/pipelines/3-tag-rna-seq/deseq2
 
-# Print imported arguments as a control with a newline between each
-echo -e "count directory: $count_dir\n"
-echo -e "outliers: $outliers\n"
-echo -e "outlier patterns: $outlier_pattern\n"
-echo -e "sample info file: $sample_list\n"
-echo -e "reference condition: $reference_condition\n"
+echo -e "$(date) . . . Starting . . ."
+echo -e "count directory: $1\noutliers: $2\noutlier patterns: $3\nsample sheet: $4\nreference condition: $5\noptions: ${*:6}\n"
 
 ml build-env/f2022 r-bundle-bioconductor/3.18-foss-2023a-r-4.3.2
 
-echo -e "\n$(date) . . . running 02.1_DESeq2_tagseq.R . . ."
-
-Rscript 02.1_DESeq2_tagseq.R $count_dir $outliers $outlier_pattern $sample_list $reference_condition
+Rscript "${deseq2_dir}/DESeq2_tagseq.R" "$@"
 
 echo -e "$(date) . . . done . . ."
