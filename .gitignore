@@ -1,0 +1,9 @@
+# Nextflow runtime
+work/
+.nextflow/
+.nextflow.log*
+null/
+# run outputs and job logs
+results/
+*.out
+!legacy/**/*.out

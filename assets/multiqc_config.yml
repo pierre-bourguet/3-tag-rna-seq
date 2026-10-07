@@ -1,0 +1,11 @@
+title: "3' tag-seq"
+module_order:
+  - fastp
+  - fastqc
+  - star
+  - salmon
+extra_fn_clean_exts:
+  - "_fastp"
+sp:
+  fastp:
+    fn: "*_fastp.json"
