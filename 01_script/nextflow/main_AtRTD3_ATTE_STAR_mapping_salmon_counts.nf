@@ -41,8 +41,8 @@ params.downsample = -1
 process write_info {
 	executor 'slurm'
 	cpus 1
-	memory '1 GB'
-	time '5m'
+	memory { 1.GB + 10.GB * task.attempt }
+	time '10m'
 
 	publishDir "${params.outdir}/01_QC/raw_read_counts/", mode: 'copy'
 
@@ -208,7 +208,7 @@ process fastqc {
 	cpus 1
 	memory '1 GB'
 	time '20m'
-	module 'fastqc/0.11.9-java-11'
+	module 'build-env/f2022:fastqc/0.11.9-java-11'
 
 	publishDir "${params.outdir}/01_QC/fastqc/", mode: 'copy', pattern: '*.{zip,html,txt}'
 
@@ -299,6 +299,7 @@ process star_alignment {
 
 	script:
 	"""
+	# some of these options are required for downstream counting with salmon: https://www.biostars.org/p/9585574/
 	STAR --genomeDir $index_star --outFileNamePrefix ${sample_name}_ \
 	--readFilesIn $fastq_file --runThreadN 8 \
 	--outSAMtype BAM SortedByCoordinate --outWigType bedGraph --outWigNorm RPM --outWigStrand Stranded \

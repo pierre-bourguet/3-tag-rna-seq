@@ -299,6 +299,7 @@ process star_alignment {
 
 	script:
 	"""
+	# some of these options are required for downstream counting with salmon: https://www.biostars.org/p/9585574/
 	STAR --genomeDir $index_star --outFileNamePrefix ${sample_name}_ \
 	--readFilesIn $fastq_file --runThreadN 8 \
 	--outSAMtype BAM SortedByCoordinate --outWigType bedGraph --outWigNorm RPM --outWigStrand Stranded \

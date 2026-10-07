@@ -131,7 +131,6 @@ for sample_name in $(echo "${!star_sample_paths_antisense[@]}" | tr ' ' '\n' | s
 
 done
 
-
 # Sort sample names and process files in sorted order for unique STAR sense
 echo -e "\n$(date) . . . Sort sample names and process files in sorted order for unique STAR sense . . . "
 
