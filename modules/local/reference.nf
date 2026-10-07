@@ -112,7 +112,7 @@ process REF_FINAL_GFF {
     """
 }
 
-// Transcript sequences (spliced exons) from the genome, + transgene cDNAs
+// Transcript sequences (spliced exons) from the genome, sorted by ID, + transgene cDNAs
 process AGAT_EXTRACT {
     cpus 2
     memory { 16.GB * task.attempt }
@@ -130,7 +130,10 @@ process AGAT_EXTRACT {
     script:
     def tg = transgene_cdna.name != 'NO_FILE' && params.transgene
     """
-    agat_sp_extract_sequences.pl -g ${gff} -f ${genome} --mrna -o transcripts_no_transgene.fa
+    agat_sp_extract_sequences.pl -g ${gff} -f ${genome} --mrna -o extracted.fa
+    # AGAT writes records in arbitrary order: sort by ID (sequences on one line) for reproducible builds
+    awk '/^>/ {if (h) print h "\t" s; h = \$0; s = ""; next} {s = s \$0} END {print h "\t" s}' extracted.fa \
+        | LC_ALL=C sort -k1,1 | tr '\t' '\n' > transcripts_no_transgene.fa
     cat transcripts_no_transgene.fa ${tg ? transgene_cdna : ''} > transcripts.fa
     """
 }
