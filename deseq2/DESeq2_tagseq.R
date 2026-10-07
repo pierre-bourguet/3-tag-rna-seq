@@ -19,7 +19,7 @@ script_dir <- dirname(normalizePath(sub("^--file=", "", file_arg)))
 
 all_args <- commandArgs(trailingOnly = TRUE)
 opt_args <- grep("^--[A-Za-z_]+=", all_args, value = TRUE)
-args <- setdiff(all_args, opt_args)
+args <- all_args[!all_args %in% opt_args]
 if (length(args) != 5) stop("expected 5 positional arguments, see the header of DESeq2_tagseq.R")
 opts <- setNames(sub("^--[A-Za-z_]+=", "", opt_args), sub("^--([A-Za-z_]+)=.*", "\\1", opt_args))
 opt <- function(key, default) if (key %in% names(opts)) opts[[key]] else default
@@ -67,7 +67,10 @@ writeLines(c(
   paste0("pre-filter: >= ", min_count, " reads in >= ", min_samples, " samples")
 ), paste0(output_dir, "DESeq2_log.txt"))
 
-is_outlier <- function(x) x %in% outliers | (length(outlier_patterns) > 0 & str_detect(x, paste(outlier_patterns, collapse = "|")))
+is_outlier <- function(x) {
+  if (length(outlier_patterns) == 0) return(x %in% outliers)
+  x %in% outliers | str_detect(x, paste(outlier_patterns, collapse = "|"))
+}
 
 # sample information ####
 print("importing sample information")
