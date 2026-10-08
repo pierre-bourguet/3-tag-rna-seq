@@ -16,9 +16,9 @@ process SPLIT_FASTQ_PAIRS {
     script:
     def lines = (params.demux_chunk_reads as long) * 4
     """
-    zcat -f ${r1} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r1_part_ &
+    pigz -dcf ${r1} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r1_part_ &
     p1=\$!
-    zcat -f ${r2} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r2_part_ &
+    pigz -dcf ${r2} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r2_part_ &
     p2=\$!
     wait \$p1
     wait \$p2
