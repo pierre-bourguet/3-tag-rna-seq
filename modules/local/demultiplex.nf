@@ -1,6 +1,7 @@
 // Demultiplexing of pooled 96-well libraries: well barcode = R2 bases 1-7, UMI = R2 bases 8-15
 
-// Splits one R1/R2 pair into chunks of --demux_chunk_reads reads (part_NNN/R1.fastq.gz, part_NNN/R2.fastq.gz)
+// Splits one R1/R2 pair into chunks of --demux_chunk_reads reads (part_NNN/R1.fastq.gz, part_NNN/R2.fastq.gz).
+// Chunks are temporary: fastest gzip level (compression at the default level limits the split)
 process SPLIT_FASTQ_PAIRS {
     tag "${library}"
     cpus 8
@@ -16,9 +17,9 @@ process SPLIT_FASTQ_PAIRS {
     script:
     def lines = (params.demux_chunk_reads as long) * 4
     """
-    pigz -dcf ${r1} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r1_part_ &
+    pigz -dcf ${r1} | split -d -a 3 -l ${lines} --filter='pigz -1 -p 4 > \$FILE.fastq.gz' - r1_part_ &
     p1=\$!
-    pigz -dcf ${r2} | split -d -a 3 -l ${lines} --filter='pigz -p 4 > \$FILE.fastq.gz' - r2_part_ &
+    pigz -dcf ${r2} | split -d -a 3 -l ${lines} --filter='pigz -1 -p 4 > \$FILE.fastq.gz' - r2_part_ &
     p2=\$!
     wait \$p1
     wait \$p2
