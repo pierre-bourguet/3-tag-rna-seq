@@ -22,6 +22,8 @@ workflow PREPARE_REFERENCE {
     SALMON_INDEX(AGAT_EXTRACT.out.fasta, REF_GENOME.out.genome, REF_GENOME.out.decoys)
     DESEQ2_TABLES(tair10_gff, te_table, teg_table, gene_annotations)
 
-    ready = STAR_INDEX.out.index.mix(SALMON_INDEX.out.index, DESEQ2_TABLES.out.tables, REF_GENOME.out.chrom_sizes).collect().map { true }
-    REF_MANIFEST(inputs, opt(params.transgene_gff), ready)
+    // the built files are inputs of REF_MANIFEST so that it reruns whenever one of them changes
+    outputs = STAR_INDEX.out.index.mix(SALMON_INDEX.out.index, AGAT_EXTRACT.out.fasta, STAR_INDEX.out.gtf, REF_FINAL_GFF.out.gff,
+                                      DESEQ2_TABLES.out.tables.flatten(), REF_GENOME.out.genome, REF_GENOME.out.chrom_sizes).collect()
+    REF_MANIFEST(inputs, opt(params.transgene_gff), outputs)
 }

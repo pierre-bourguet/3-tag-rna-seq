@@ -238,7 +238,7 @@ process REF_MANIFEST {
     input:
     path inputs, stageAs: 'inputs/*'
     path transgene_gff, stageAs: 'input/transgene.gff'
-    val ready
+    path outputs, stageAs: 'outputs/*'
 
     output:
     path "reference_manifest.tsv"
