@@ -313,6 +313,15 @@ Annotation joined to the tables: Araport11 gene description and symbol, with the
     reads shared between duplicated or near-identical loci (chloroplast operons, identical paralogs, fusion transcripts)
     that salmon assigns differently because the transcript order changed.
   - Demultiplexing: same reads per well as the legacy script.
+  - Full rerun of tagseq_05 (Kanno ddm1 EMS alleles, 19 samples, `--steps demultiplex,map --max_n_read 10000000`)
+    from the raw pool, compared with `04_output/tagseq_05_ddm1_EMS_mutants_10M`:
+    - reads per well, after trimming and after UMI collapsing: identical for all samples;
+    - the 8 samples below 10M reads: identical STAR statistics and total counts, about 200 of 68,157 genes differ
+      (multi-mapping reads, as above);
+    - the 11 downsampled samples: a different random subset (seqtk);
+    - DESeq2 with the legacy arguments: 1015 up / 1301 down features and 1283 up / 22 down TEs
+      (legacy: 997 / 1301 and 1276 / 21); 93–97% of the DEGs of each comparison are shared, and most of the others
+      have padj < 0.2 and |log2FC| > 0.8 in both runs.
 - **Behavior changes since `legacy-v1`:**
   - Downsampling uses `seqtk sample -2` instead of an in-memory awk reservoir. Samples below `--max_n_read` are
     unaffected (the legacy code kept all their reads but shuffled their order). Samples above it get a different random
