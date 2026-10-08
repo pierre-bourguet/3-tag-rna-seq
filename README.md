@@ -54,7 +54,7 @@ small sbatch job and point `-w` to scratch:
 ml nextflow/24.10.6
 pipeline=/groups/berger/user/pierre.bourguet/shared/pipelines/3-tag-rna-seq
 
-# 1. once per reference (ATTE, TEG, ATTE + mTurq transgene, ...)
+# 1. once per reference (ATTE, TEG and ATTE + mTurq are built on CLIP: resources/genomes/a_thaliana/AtRTD3/create_tagseq_references.sh)
 nextflow run $pipeline/main.nf -profile cbe --build_reference --te_annotation ATTE -w $SCRATCHDIR/nf_work_ref
 
 # 2a. demultiplex + map
@@ -302,9 +302,17 @@ Annotation joined to the tables: Araport11 gene description and symbol, with the
   - `demultiplex/`, `split_fastq/`: the previous demultiplexing scripts;
   - `reference/`: the original reference-preparation scripts;
   - `original_yoav/`, `early_pierre/`: earlier pipeline versions.
-- The new post-processing reproduces the legacy count and RPM tables byte for byte (checked on tagseq_03 with transgene,
-  96 samples, and tagseq_07), and the same per-sample statistics. The reference build reproduces the legacy ATTE
-  conversion and final GFF byte for byte.
+- **Checked against the legacy pipeline:**
+  - Reference build (ATTE, ATTE + mTurq): genome, decoys, AGAT input and output, final GFF and all DESeq2 tables are
+    byte-identical to the legacy reference files; transcript sequences are identical (record order differs, see below).
+  - Post-processing: count and RPM tables are byte-identical to `01.1_aggregate_data.sh` output (tagseq_03 with
+    transgene, 96 samples; tagseq_07); per-sample statistics are identical.
+  - DESeq2: on tagseq_07, all 258 output tables and the normalized tables are byte-identical to the legacy run.
+  - Whole pipeline vs `legacy-v1` on the same 2 x 100,000 reads: read numbers after trimming and UMI collapsing,
+    STAR statistics, and total salmon counts per sample are identical. 102 of 68,157 genes have different counts:
+    reads shared between duplicated or near-identical loci (chloroplast operons, identical paralogs, fusion transcripts)
+    that salmon assigns differently because the transcript order changed.
+  - Demultiplexing: same reads per well as the legacy script.
 - **Behavior changes since `legacy-v1`:**
   - Downsampling uses `seqtk sample -2` instead of an in-memory awk reservoir. Samples below `--max_n_read` are
     unaffected (the legacy code kept all their reads but shuffled their order). Samples above it get a different random
@@ -312,6 +320,8 @@ Annotation joined to the tables: Araport11 gene description and symbol, with the
   - Unique-mapper counts are produced for every run.
   - Transgene rows are replaced by unique-mapper counts by ID, not by position.
   - `pipeline_statistics.tsv` columns are sorted by sample name, the same order as the count tables.
+  - Transcript sequences are sorted by ID when the reference is built. AGAT writes them in an order that varies between
+    runs, which changes salmon's assignment of a small fraction of multi-mapping reads (see above).
 
 ## Contributions
 
