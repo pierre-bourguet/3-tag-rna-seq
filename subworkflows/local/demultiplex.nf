@@ -19,7 +19,14 @@ workflow DEMULTIPLEX {
     SPLIT_FASTQ_PAIRS(ch_libraries)
     DEMULTIPLEX_CHUNK(SPLIT_FASTQ_PAIRS.out.chunks.transpose(), barcodes)
 
-    MERGE_WELL(DEMULTIPLEX_CHUNK.out.fastq.flatten().map { f -> tuple(f.name, f) }.groupTuple())
+    // chunks sorted by library and chunk number: the read order of the merged fastq is that of the input
+    // (fastp adapter auto-detection reads the first reads of each file)
+    ch_well_parts = DEMULTIPLEX_CHUNK.out.fastq
+        .transpose()
+        .map { library, chunk, f -> tuple(f.name, "${library}/${chunk}", f) }
+        .groupTuple()
+        .map { name, keys, files -> tuple(name, [keys, files].transpose().sort { it[0] }.collect { it[1] }) }
+    MERGE_WELL(ch_well_parts)
 
     MAKE_SAMPLESHEET(file(params.well_sheet, checkIfExists: true), barcodes, DEMULTIPLEX_CHUNK.out.barcode_stats.collect())
     PLOT_DEMUX(MAKE_SAMPLESHEET.out.summary)

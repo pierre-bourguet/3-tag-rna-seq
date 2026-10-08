@@ -43,7 +43,7 @@ process DEMULTIPLEX_CHUNK {
     path barcodes
 
     output:
-    path "demux/*.fastq.gz",            emit: fastq
+    tuple val(library), val(chunk.name), path("demux/*.fastq.gz"), emit: fastq
     path "${library}_${chunk.name}_barcodes_stats.txt", emit: barcode_stats
     path "${library}_${chunk.name}_umis_stats.txt",     emit: umi_stats
 
@@ -56,7 +56,7 @@ process DEMULTIPLEX_CHUNK {
     """
 }
 
-// Concatenates one well's fastq across chunks and libraries
+// Concatenates one well's fastq across chunks and libraries, in input order (library, then chunk)
 process MERGE_WELL {
     tag "${name}"
     cpus 1
@@ -65,13 +65,14 @@ process MERGE_WELL {
     publishDir "${params.outdir}/00_demultiplex/fastq", mode: 'copy'
 
     input:
-    tuple val(name), path(parts, stageAs: 'in?/*')
+    tuple val(name), path(parts, stageAs: 'chunk?/*')
 
     output:
     path "${name}", emit: fastq
 
     script:
     """
+    # parts are sorted by library and chunk upstream; the task hash ignores their order
     cat ${parts} > ${name}
     """
 }
