@@ -13,6 +13,9 @@
 #                        shared ATTE reference (runs made before the manifest existed)
 #   --lfc=1 --padj=0.1   DEG thresholds (|log2FC| >= lfc and padj < padj)
 #   --min_count=10 --min_samples=3   pre-filter: keep features with >= min_count reads in >= min_samples samples
+#
+# Sense and antisense features (_AS suffix) are fitted separately, the antisense fit with the sense size factors; antisense calls are kept only if
+# they pass the leakage and opposite-strand partner rules of shared/pipelines/DESeq2/antisense_calls.R. Tables stack both fits (sense rows first).
 
 file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)[1]
 script_dir <- dirname(normalizePath(sub("^--file=", "", file_arg)))
@@ -37,6 +40,7 @@ min_samples <- as.numeric(opt("min_samples", 3))
 
 print("loading environment")
 source(file.path(script_dir, "DESeq2_environment.R"))
+source(file.path(script_dir, "..", "..", "DESeq2", "antisense_calls.R"))
 
 run_manifest <- file.path(base_dir, "..", "pipeline_info", "reference_manifest.tsv")
 default_manifest <- file.path(script_dir, "..", "..", "..", "resources", "genomes", "a_thaliana", "AtRTD3", "processed", "tagseq_ATTE",
@@ -64,7 +68,9 @@ writeLines(c(
   paste0("reference condition: ", reference_condition),
   paste0("reference manifest: ", manifest_file, " (", manifest[["te_annotation"]], ")"),
   paste0("DEG thresholds: |log2FC| >= ", lfc_threshold, ", padj < ", padj_threshold),
-  paste0("pre-filter: >= ", min_count, " reads in >= ", min_samples, " samples")
+  paste0("pre-filter: >= ", min_count, " reads in >= ", min_samples, " samples"),
+  paste0("antisense: separate fit with the sense size factors; calls kept if antisense > ", leak_fold,
+         "x expected leakage and no opposite-strand feature called in sense in the same direction")
 ), paste0(output_dir, "DESeq2_log.txt"))
 
 is_outlier <- function(x) {
@@ -137,7 +143,7 @@ sample_columns <- which(names(counts_merged) %in% samples$full_name)
 print("running DESeq2")
 conditions <- unique(samples$condition)[unique(samples$condition) != reference_condition]
 
-DESeq2_function <- function(x) {
+DESeq2_function <- function(x, size_factors = NULL) {
   cts <- round(x[, sample_columns])
   row.names(cts) <- x$Geneid
   coldata <- data.frame(condition = condition_of[names(x)[sample_columns]], type = "single-strand")
@@ -147,15 +153,39 @@ DESeq2_function <- function(x) {
   mcols(dds) <- DataFrame(mcols(dds))
   dds <- dds[rowSums(counts(dds) >= min_count) >= min_samples, ]
   dds$condition <- relevel(dds$condition, ref = reference_condition)
+  if (!is.null(size_factors)) sizeFactors(dds) <- size_factors[colnames(dds)]
   DESeq(dds)
 }
 
-dds <- DESeq2_function(counts_merged)
-save(dds, file = paste0(output_dir, "DESeq2_object.RData"))
+is_AS_row <- str_detect(counts_merged$Geneid, "_AS$")
+dds <- DESeq2_function(counts_merged[!is_AS_row, ])
+dds_AS <- DESeq2_function(counts_merged[is_AS_row, ], size_factors = sizeFactors(dds))
+save(dds, dds_AS, file = paste0(output_dir, "DESeq2_object.RData"))
+
+# strand leakage per library, from the raw counts before the pre-filter (antisense rows named by their sense ID)
+raw_counts <- function(rows) {
+  m <- round(as.matrix(counts_merged[rows, sample_columns]))
+  rownames(m) <- sub("_AS$", "", counts_merged$Geneid[rows])
+  m
+}
+S_raw <- raw_counts(!is_AS_row)
+A_raw <- raw_counts(is_AS_row)
+leak <- leak_rates(S_raw, A_raw, sizeFactors(dds), features$Geneid)
+write.table(data.frame(sample = colnames(dds), condition = dds$condition, size_factor = sizeFactors(dds), leak_rate = leak[colnames(dds)]),
+            file = paste0(output_dir, "antisense_leakage.tsv"), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+
+# features of either fit overlapping on opposite strands
+model_ids <- union(rownames(dds), sub("_AS$", "", rownames(dds_AS)))
+strand_pairs <- Araport11_annotations %>%
+  dplyr::filter(Geneid %in% model_ids) %>%
+  transmute(id = Geneid, chr, start, end, strand) %>%
+  as.data.frame() %>%
+  opposite_strand_pairs()
 
 # PCA using VST ####
 print("plotting PCA using vst transformation")
-vsd <- vst(dds, blind = FALSE)
+vst_safe <- function(d) if (nrow(d) >= 1000) vst(d, blind = FALSE) else varianceStabilizingTransformation(d, blind = FALSE)
+vsd <- rbind(vst_safe(dds), vst_safe(dds_AS))
 ntop_variable_features <- 1000
 pcaData <- plotPCA(vsd, intgroup = c("condition"), returnData = TRUE, ntop = ntop_variable_features)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
@@ -195,7 +225,7 @@ dev.off()
 
 # normalized tables: size-factor normalized counts (ESF, median of ratios), VST, rlog; per sample and averaged ####
 print("normalizing counts with estimated size factors")
-ESF <- as.data.frame(counts(dds, normalized = TRUE)) %>%
+ESF <- as.data.frame(rbind(counts(dds, normalized = TRUE), counts(dds_AS, normalized = TRUE))) %>%
   mutate(Geneid = row.names(.)) %>%
   dplyr::select(Geneid, everything())
 ESF_avg <- average_conditions(ESF)
@@ -204,16 +234,16 @@ write.table(x = ESF_avg, file = file.path(norm_dir, "ESF_averaged.tsv"), quote =
 
 print("export variance-stabilized counts")
 vsd <- as_tibble(assay(vsd)) %>%
-  mutate(Geneid = row.names(assay(dds))) %>%
+  mutate(Geneid = row.names(assay(vsd))) %>%
   dplyr::select(Geneid, everything())
 vsd_avg <- average_conditions(vsd)
 write.table(x = vsd, file = file.path(norm_dir, "vst.tsv"), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 write.table(x = vsd_avg, file = file.path(norm_dir, "vst_averaged.tsv"), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 
 print("rlog transformation")
-rld <- rlog(dds, blind = FALSE)
-rld <- as_tibble(assay(rld)) %>%
-  mutate(Geneid = row.names(assay(dds))) %>%
+rld <- rbind(assay(rlog(dds, blind = FALSE)), assay(rlog(dds_AS, blind = FALSE)))
+rld <- as_tibble(rld) %>%
+  mutate(Geneid = row.names(rld)) %>%
   dplyr::select(Geneid, everything())
 rld_avg <- average_conditions(rld)
 write.table(x = rld, file = file.path(norm_dir, "rlog.tsv"), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
@@ -221,15 +251,30 @@ write.table(x = rld_avg, file = file.path(norm_dir, "rlog_averaged.tsv"), quote 
 
 # pairwise comparisons and DEG selection ####
 
-# results of one condition vs the reference
-f <- function(aa, bb) {
-  eval(substitute(a <- results(dds, contrast = c("condition", as.character(b), reference_condition)), list(a = aa, b = bb)))
-}
-
 # sense and antisense IDs of an annotation set
 with_AS <- function(ids) c(ids, paste0(ids, "_AS"))
-is_up <- function(res) res$log2FoldChange >= lfc_threshold & !is.na(res$padj) & res$padj < padj_threshold
-is_down <- function(res) res$log2FoldChange <= -lfc_threshold & !is.na(res$padj) & res$padj < padj_threshold
+# calls: thresholds, plus the antisense rules on antisense rows
+passes_antisense_rules <- function(res) {
+  !str_detect(row.names(res), "_AS$") | antisense_call_kept(res$antisense_over_leakage, res$opposite_strand_sense_DEG)
+}
+is_up <- function(res) res$log2FoldChange >= lfc_threshold & !is.na(res$padj) & res$padj < padj_threshold & passes_antisense_rules(res)
+is_down <- function(res) res$log2FoldChange <= -lfc_threshold & !is.na(res$padj) & res$padj < padj_threshold & passes_antisense_rules(res)
+
+# results of one condition vs the reference: sense rows, then antisense rows with the values of the antisense rules
+contrast_results <- function(condition) {
+  contrast <- c("condition", condition, reference_condition)
+  res_S <- results(dds, contrast = contrast)
+  res_S$antisense_over_leakage <- NA_real_
+  res_S$opposite_strand_sense_DEG <- NA_character_
+  res_AS <- results(dds_AS, contrast = contrast)
+  ids <- sub("_AS$", "", row.names(res_AS))
+  res_AS$antisense_over_leakage <- antisense_over_leakage(S_raw, A_raw, sizeFactors(dds), leak, ids, res_AS$log2FoldChange,
+                                                          colnames(dds)[dds$condition == condition],
+                                                          colnames(dds)[dds$condition == reference_condition])
+  res_AS$opposite_strand_sense_DEG <- opposite_strand_sense_calls(ids, res_AS$log2FoldChange, strand_pairs,
+                                                                  row.names(res_S)[is_up(res_S)], row.names(res_S)[is_down(res_S)])
+  rbind(res_S, res_AS)
+}
 
 up <- function(res, annotations) {
   geneids <- with_AS(get(annotations)$Geneid)
@@ -258,7 +303,7 @@ down_TEs_intersect_filter <- function(res, TE_df, feature_df) {
 
 # DEGs in any comparison ("batch" DEGs): tables and heatmaps ####
 print("DEGs found in batch mode: export tables and heatmaps")
-all_res <- Map(f, paste0("res_", conditions), as.list(conditions))
+all_res <- setNames(lapply(conditions, contrast_results), paste0("res_", conditions))
 
 DEGs <- list(
   upTEs = unique(unlist(lapply(FUN = up_TEs_intersect_filter, X = all_res, TE_df = "TEs", feature_df = "features"))),

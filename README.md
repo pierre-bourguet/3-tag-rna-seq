@@ -199,9 +199,9 @@ counts for the transgene rows.
 
 ## Differential expression (DESeq2)
 
-`deseq2/DESeq2_tagseq.R` (submitted with `deseq2/run_deseq2.sbatch`) does most of the downstream work: one DESeq2 model,
-every condition against a reference condition, separate DEG calls for genes and TEs, and normalized tables and heatmaps
-for all of them.
+`deseq2/DESeq2_tagseq.R` (submitted with `deseq2/run_deseq2.sbatch`) does most of the downstream work: one DESeq2 model
+per orientation (sense, antisense), every condition against a reference condition, separate DEG calls for genes and TEs,
+and normalized tables and heatmaps for all of them.
 
 ### Usage
 
@@ -227,17 +227,18 @@ keeping at least two replicates per genotype.
 
 ### What it does
 
-1. **Counts.** `star_counts.tsv` (sense) and `star_counts_AS.tsv` (antisense, IDs suffixed `_AS`) are stacked into one
-   matrix. Isoforms are summed per gene (`AT1G01010.1` + `.2` → `AT1G01010`), AtRTD3 fusion transcripts (IDs with `-`)
+1. **Counts.** `star_counts.tsv` (sense) and `star_counts_AS.tsv` (antisense, IDs suffixed `_AS`) are read together.
+   Isoforms are summed per gene (`AT1G01010.1` + `.2` → `AT1G01010`), AtRTD3 fusion transcripts (IDs with `-`)
    are removed, and only chromosome 1–5 features and transgenes are kept. The matrix is then restricted to
-   protein-coding genes (TAIR10) and the TE set of the reference (ATTEs or TEGs). Sense and antisense features share
-   one model, so size factors are estimated on both together.
+   protein-coding genes (TAIR10) and the TE set of the reference (ATTEs or TEGs).
 2. **Model.** Counts are rounded. Features with ≥ 10 reads in ≥ 3 samples are kept. The design is `~ condition`, with
-   the condition taken from the sample name minus `_R<n>` (or from the `condition` column). It is fitted with `DESeq()`
-   (Wald test). Results are extracted for each condition vs the reference, with unshrunken log2 fold changes and BH-adjusted
-   p-values.
+   the condition taken from the sample name minus `_R<n>` (or from the `condition` column). Sense and antisense features
+   are fitted separately with `DESeq()` (Wald test), the antisense fit with the size factors of the sense fit (see
+   [Sense and antisense features](#sense-and-antisense-features)). Results are extracted for each condition vs the
+   reference, with unshrunken log2 fold changes and p-values BH-adjusted within each orientation.
 3. **DEG calls.** Up: log2FC ≥ 1 and padj < 0.1. Down: log2FC ≤ −1 and padj < 0.1. They are made separately for genes
-   (`up_genes`/`down_genes`, or `upfeatures`/`downfeatures` in batch mode) and TEs, sense and antisense alike.
+   (`up_genes`/`down_genes`, or `upfeatures`/`downfeatures` in batch mode) and TEs, sense and antisense alike. An
+   antisense call must also pass the two antisense rules below.
 4. **TE overlap filter.** A TE whose expression could be the gene's is not called differential:
    - a sense TE overlapping a protein-coding gene (≥ 1 bp) on the same strand;
    - an antisense TE overlapping a gene on the opposite strand.
@@ -257,36 +258,65 @@ keeping at least two replicates per genotype.
    - number of DEGs per comparison;
    - sample-to-sample Euclidean distances annotated with plate row and column, to detect position effects.
 7. **Tables and heatmaps.** Heatmaps are drawn only for sets with more than 3 features.
-   - `pairwise_comparisons/<cond>_vs_<ref>/`: the full DESeq2 table with annotation (`<cond>_vs_<ref>.tsv`), then per
+   - `pairwise_comparisons/<cond>_vs_<ref>/`: the full DESeq2 table with annotation (`<cond>_vs_<ref>.tsv`; sense rows,
+     then antisense rows with the two values of the antisense rules), then per
      DEG class the normalized values (ESF, VST, rlog, condition averages) and heatmaps; per-replicate versions are in
      `all_replicates/`.
    - `batch_DEGs/`: union of the DEGs over all comparisons (useful to cluster all conditions on one set), with tables
      and heatmaps for each normalization.
 8. **For further analysis:**
-   - `DESeq2_object.RData`: the `dds` object;
-   - `DESeq2_environment.RData`: the whole session (`dds`, result tables, DEG lists, annotations);
+   - `DESeq2_object.RData`: the sense (`dds`) and antisense (`dds_AS`) fits;
+   - `DESeq2_environment.RData`: the whole session (`dds`, `dds_AS`, result tables, DEG lists, annotations);
+   - `antisense_leakage.tsv`: size factor and strand-leakage rate per sample;
    - `07_analysis/your_analysis.R`: a starter script that loads the session (an existing one is not overwritten);
    - `DESeq2_log.txt`: arguments, reference used and thresholds.
 
 Annotation joined to the tables: Araport11 gene description and symbol, with the predicted subcellular localization of the
 `.1` isoform, for genes; family and superfamily for TEs.
 
-### Sense and antisense in one model
+### Sense and antisense features
 
-Benchmarked against other designs on two TEG runs of this pipeline and on two RNA-seq datasets of the shared DESeq2 pipeline; numbers and methods in
+The same design and rules are used by the shared DESeq2 pipeline (`shared/pipelines/DESeq2/`); the rules are coded once, in
+`shared/pipelines/DESeq2/antisense_calls.R`.
+
+An antisense count holds three kinds of reads: strand leakage (a fixed fraction of the sense reads of the same feature, which differs between
+libraries), sense reads of a feature overlapping it on the opposite strand, and genuine antisense transcription. Only the last is antisense
+expression.
+
+**Quantification.**
+
+- Antisense counts are used raw (no leakage subtraction).
+- Sense and antisense are fitted separately: each orientation has its own dispersion trend and its own BH adjustment.
+- The antisense fit uses the size factors of the sense fit, so the sense and antisense values of a feature are on one scale (`normalized_counts/`,
+  log2FC). Antisense size factors of their own would measure leakage and antisense composition, not library depth.
+
+**Antisense calls.** An antisense up or down call (thresholds above) is kept only if it passes both rules:
+
+1. **Leakage.** In the samples where antisense is higher (the compared condition for an up call, the reference for a down call), the
+   normalized antisense count must exceed 10 times the leakage expected from the sense count of the same feature (sample leak rate x sense
+   count, summed over those samples). Leak rate of a sample: median antisense/sense count ratio at the 2,000 protein-coding genes with the
+   highest mean normalized sense count, on the counts before the pre-filter (`antisense_leakage.tsv`).
+2. **Opposite-strand partner.** No feature overlapping it (>= 1 bp) on the opposite strand is called in sense in the same direction in the
+   same comparison.
+
+The full table of each comparison keeps every feature, with the two values the rules use: `antisense_over_leakage` (normalized antisense count over
+expected leakage; `Inf` when no leakage is expected, `NA` without antisense count) and `opposite_strand_sense_DEG` (the partners called in sense).
+DEG tables, heatmaps and batch lists hold only the kept calls. The TE overlap filter above applies on top.
+
+Sense calls do not depend on the antisense rules. Counting a TE up in both orientations once (e.g. "sense wins" for TE lists) is an
+analysis choice, not a pipeline rule.
+
+**Why.** Benchmark (two TEG runs of this pipeline, two RNA-seq datasets of the shared DESeq2 pipeline) and simulation with known truth:
 `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md` (tool:
 `shared/tools/deseq2_antisense_benchmark/`).
 
-- **Antisense zeros do not reach the size factors.** Median of ratios uses only features with a count in every sample. The antisense features without
-  a zero (12-14% of the features used in the TEG runs) pull the shared size factors by at most 2% there.
-- **What antisense counts contain**: at expressed genes, partly strand leakage, a per-library fraction of the sense reads (up to about 0.7% in the TEG
-  runs); at reactivated TEs, real antisense transcription; at genes overlapping another feature on the opposite strand, that feature's sense reads.
-  An antisense call at a locus that is also called in sense is therefore not independent evidence.
-- **BH over both orientations** (this pipeline) loosens the antisense calls slightly: 1% of the antisense TE calls in the TEG runs. Adjusting each
-  orientation on its own is the correct choice when antisense lists are read on their own.
-- **Do not give antisense its own size factors**: they measure leakage and antisense composition, not library depth (up to 20% from the sense size
-  factors). Shared size factors keep a feature's sense and antisense values on one scale, so the two can be compared in `normalized_counts/`.
-- **Dispersion** differs between orientations, but fitting it per orientation changes at most 2.5% of the antisense calls.
+- Leakage dominates every design choice: without a rule, about half of the simulated antisense calls are leakage copies of sense changes, whatever
+  the size factors, dispersion or BH. The leakage rule brings them to 2-6%, as subtracting the expected leakage from the counts does, without
+  changing any count or value.
+- Removing an antisense call because its own sense is called catches the copies of sense changes, but not the calls produced at loci whose sense
+  does not change when the two groups' libraries leak at different rates (12-17% false calls left), and it drops genuine bidirectional
+  transcription. The leakage rule does both right.
+- Antisense zeros do not reach size factors (median of ratios uses only features with a count in every sample).
 
 ## Parameters
 
@@ -348,6 +378,9 @@ Benchmarked against other designs on two TEG runs of this pipeline and on two RN
   - `pipeline_statistics.tsv` columns are sorted by sample name, the same order as the count tables.
   - Transcript sequences are sorted by ID when the reference is built. AGAT writes them in an order that varies between
     runs, which changes salmon's assignment of a small fraction of multi-mapping reads (see above).
+  - DESeq2 fits sense and antisense separately (antisense with the sense size factors) and filters antisense calls by
+    the leakage and opposite-strand partner rules; `legacy-v1` fitted both orientations in one model, with shared size
+    factors and BH over both, and kept every antisense call.
 
 ## Contributions
 
