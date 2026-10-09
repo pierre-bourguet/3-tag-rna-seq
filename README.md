@@ -273,17 +273,20 @@ Annotation joined to the tables: Araport11 gene description and symbol, with the
 
 ### Sense and antisense in one model
 
-Benchmarked against separate fits on two TEG runs (24 and 14 samples); numbers and methods in
-`projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md`.
+Benchmarked against other designs on two TEG runs of this pipeline and on two RNA-seq datasets of the shared DESeq2 pipeline; numbers and methods in
+`projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md` (tool:
+`shared/tools/deseq2_antisense_benchmark/`).
 
-- **Antisense zeros do not reach the size factors.** Median of ratios uses only features with a count in every sample. The antisense
-  features without a zero (12-14% of the features used) move the size factors by at most 2% and change no sense TE call.
-- **Do not give antisense its own size factors.** The antisense share of the counts differs between genotypes (3.3-4.3% in one run),
-  so size factors from the antisense features alone differ from the sense ones by up to 20% and shift antisense log2FC by up to
-  0.13. Shared size factors keep a feature's sense and antisense values on one scale, so the two can be compared directly in
-  `normalized_counts/`.
-- **Dispersion** differs between orientations (antisense lower at low counts), but fitting it separately changed 0-5 antisense TE
-  calls per comparison. The one-model fit is kept.
+- **Antisense zeros do not reach the size factors.** Median of ratios uses only features with a count in every sample. The antisense features without
+  a zero (12-14% of the features used in the TEG runs) pull the shared size factors by at most 2% there.
+- **What antisense counts contain**: at expressed genes, partly strand leakage, a per-library fraction of the sense reads (up to about 0.7% in the TEG
+  runs); at reactivated TEs, real antisense transcription; at genes overlapping another feature on the opposite strand, that feature's sense reads.
+  An antisense call at a locus that is also called in sense is therefore not independent evidence.
+- **BH over both orientations** (this pipeline) loosens the antisense calls slightly: 1% of the antisense TE calls in the TEG runs. Adjusting each
+  orientation on its own is the correct choice when antisense lists are read on their own.
+- **Do not give antisense its own size factors**: they measure leakage and antisense composition, not library depth (up to 20% from the sense size
+  factors). Shared size factors keep a feature's sense and antisense values on one scale, so the two can be compared in `normalized_counts/`.
+- **Dispersion** differs between orientations, but fitting it per orientation changes at most 2.5% of the antisense calls.
 
 ## Parameters
 
