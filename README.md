@@ -271,6 +271,23 @@ keeping at least two replicates per genotype.
 Annotation joined to the tables: Araport11 gene description and symbol, with the predicted subcellular localization of the
 `.1` isoform, for genes; family and superfamily for TEs.
 
+### Sense and antisense in one model
+
+Benchmarked against separate fits on two TEG runs (24 and 14 samples); numbers and methods in
+`projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md`.
+
+- **Antisense zeros do not reach the size factors.** Median of ratios uses only features with a count in every sample. The antisense
+  features without a zero (12-14% of the features used) move the size factors by at most 2% and change no sense TE call.
+- **Do not give antisense its own size factors.** The antisense share of the counts differs between genotypes (3.3-4.3% in one run),
+  so size factors from the antisense features alone differ from the sense ones by up to 20% and shift antisense log2FC by up to
+  0.13. Sense size factors keep a feature's sense and antisense values on one scale, so the two can be compared directly in
+  `normalized_counts/`.
+- **Dispersion** differs between orientations (antisense lower at low counts), but fitting it separately changed 0-5 antisense TE
+  calls per comparison. The one-model fit is kept.
+- **Antisense TE calls are mostly not duplicates of sense calls.** In the tag-seq06 TEG run, 84 of the 86 TEGs called up in
+  antisense only have no sense feature in the model (sense counts below the pre-filter): the locus is transcribed only from the
+  strand opposite its annotation. A TE up in both orientations is one event; keep its sense call when counting TEs.
+
 ## Parameters
 
 | Parameter | Default | |
