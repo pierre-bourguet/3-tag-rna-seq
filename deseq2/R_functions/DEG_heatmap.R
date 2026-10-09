@@ -32,7 +32,8 @@ DEG_heatmap <- function(x, y, z, n, output_dir) {
         sampleDistMatrix,
         name = n,
         col = colors,
-        cluster_rows = TRUE,
+        cluster_rows = as.dendrogram(hclust(dist(sampleDistMatrix))),  # clustered once for both draws below
+        row_dend_reorder = TRUE,
         cluster_columns = FALSE,
         column_title = title,
         column_title_gp = gpar(fontsize = 10),
