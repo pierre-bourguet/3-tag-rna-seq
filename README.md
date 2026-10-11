@@ -238,7 +238,8 @@ keeping at least two replicates per genotype.
    reference, with unshrunken log2 fold changes and p-values BH-adjusted within each orientation.
 3. **DEG calls.** Up: log2FC ≥ 1 and padj < 0.1. Down: log2FC ≤ −1 and padj < 0.1. They are made separately for genes
    (`up_genes`/`down_genes`, or `upfeatures`/`downfeatures` in batch mode) and TEs, sense and antisense alike. An
-   antisense call must also pass the two antisense rules below.
+   antisense call must also pass the two antisense rules below. A feature called in both orientations is one entry, in
+   the orientation with the larger change (see [Sense and antisense features](#sense-and-antisense-features)).
 4. **TE overlap filter.** A TE whose expression could be the gene's is not called differential:
    - a sense TE overlapping a protein-coding gene (≥ 1 bp) on the same strand;
    - an antisense TE overlapping a gene on the opposite strand.
@@ -250,7 +251,8 @@ keeping at least two replicates per genotype.
    - `ESF`: DESeq2 size-factor normalized counts (median of ratios);
    - `vst` and `rlog`: variance-stabilized and regularized-log values (`blind = FALSE`), for heatmaps, PCA and clustering;
    - `RPM`: salmon TPM, isoforms summed. Without length correction TPM equals reads per million, and it is computed on
-     all features, not only the modeled ones;
+     all features with an AGI ID (`AT1G...`, `AT1TE...`), not only the modeled ones; AtRTD3 genes without one (`G...`)
+     are left out;
    - `log2FC.tsv`: log2 fold changes of all comparisons.
 6. **Plots** (`default_plots/`):
    - PCA on the 1,000 most variable features (VST);
@@ -260,10 +262,10 @@ keeping at least two replicates per genotype.
 7. **Tables and heatmaps.** Heatmaps are drawn only for sets with more than 3 features.
    - `pairwise_comparisons/<cond>_vs_<ref>/`: the full DESeq2 table with annotation (`<cond>_vs_<ref>.tsv`; sense rows,
      then antisense rows with the two values of the antisense rules), then per
-     DEG class the normalized values (ESF, VST, rlog, condition averages) and heatmaps; per-replicate versions are in
-     `all_replicates/`.
-   - `batch_DEGs/`: union of the DEGs over all comparisons (useful to cluster all conditions on one set), with tables
-     and heatmaps for each normalization.
+     DEG class the normalized values (ESF, VST, rlog, condition averages) and heatmaps, one row per feature with
+     `orientations_called`; per-replicate versions are in `all_replicates/`.
+   - `batch_DEGs/`: union of the DEGs over all comparisons (useful to cluster all conditions on one set), one row per
+     feature with `orientations_called`, with tables and heatmaps for each normalization.
 8. **For further analysis:**
    - `DESeq2_object.RData`: the sense (`dds`) and antisense (`dds_AS`) fits;
    - `DESeq2_environment.RData`: the whole session (`dds`, `dds_AS`, result tables, DEG lists, annotations);
@@ -306,17 +308,22 @@ DEG tables, heatmaps and batch lists hold only the kept calls. The TE overlap fi
 Sense calls do not depend on the antisense rules. Kept antisense calls are differential loci in their own right: lists of up or down features
 include them.
 
-**A feature counts once ("sense wins").** The pipeline's DEG tables and batch lists keep the two orientations as separate entries (`<ID>` and
-`<ID>_AS`). Any list, count or overlap built from them, in either pipeline (TEs or genes), resolves a feature called in both orientations to
-one entry, in the scope of the question:
+**A feature counts once (dominant change wins).** A feature called in both orientations, in the same direction, is one entry, labelled `both`
+(column `orientations_called`: `sense`, `antisense` or `both`), and is represented by the orientation with the larger change in mean normalized
+count: condition minus reference for an up call, reference minus condition for a down call (ties: sense).
 
-- **Per condition** (set membership, overlaps between conditions: "is this feature up in X"): within each comparison, a feature called in both
-  orientations is one sense entry. Other comparisons are unaffected.
-- **Across conditions** (union lists, one row per feature in a heatmap or table): a feature called in sense in any comparison is a sense entry,
-  and its antisense-only calls in the other comparisons are dropped; a comparison counts as called for that feature only in the orientation the
-  list keeps. A feature called only in antisense, in every comparison where it is called, is an antisense entry.
+- **Per comparison**: the DEG tables, heatmaps and DEG numbers of `pairwise_comparisons/` hold one row per feature.
+- **Across comparisons** (`batch_DEGs/`): a feature called in either orientation in any comparison is one entry; among the orientations called in
+  some comparison, the one with the larger change summed over the comparisons where the feature is called is kept. A comparison counts as calling
+  the feature whatever the orientation of its call.
+- The same rule holds for any list built from the calls, in this pipeline and in the shared DESeq2 pipeline (whose antisense run writes
+  `DEGs_both_orientations/`), with the functions `one_entry_per_feature()` and `union_one_entry_per_feature()` of
+  `shared/pipelines/DESeq2/antisense_calls.R`. The full table of each comparison keeps both orientations.
 
-Both scopes apply within one direction (an up list, or a down list).
+The change, not the level, decides: a constantly expressed transcript on the opposite strand adds the same reads in both groups, so it can raise
+the antisense level of a feature but not its change. At TEs called up in both orientations in two tag-seq datasets, antisense is the larger
+change in about half of them, and the opposite-strand features whose expression matches the antisense signal are themselves induced in the
+mutant (TE transcripts annotated as separate genes): `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/te_call_lists/RESULTS.md`.
 
 **Why.** Benchmark (two TEG runs of this pipeline, two RNA-seq datasets of the shared DESeq2 pipeline) and simulation with known truth:
 `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md` (tool:
@@ -393,6 +400,8 @@ Both scopes apply within one direction (an up list, or a down list).
   - DESeq2 fits sense and antisense separately (antisense with the sense size factors) and filters antisense calls by
     the leakage and opposite-strand partner rules; `legacy-v1` fitted both orientations in one model, with shared size
     factors and BH over both, and kept every antisense call.
+  - DEG lists, tables, heatmaps and DEG numbers hold one entry per feature (orientation with the larger change);
+    `legacy-v1` listed a feature called in both orientations twice.
 
 ## Contributions
 

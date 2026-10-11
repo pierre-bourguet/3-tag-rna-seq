@@ -16,6 +16,8 @@
 #
 # Sense and antisense features (_AS suffix) are fitted separately, the antisense fit with the sense size factors; antisense calls are kept only if
 # they pass the leakage and opposite-strand partner rules of shared/pipelines/DESeq2/antisense_calls.R. Tables stack both fits (sense rows first).
+# DEG lists, tables, heatmaps and numbers hold one entry per feature: a feature called in both orientations is kept in the orientation with the
+# larger change in mean normalized count (one_entry_per_feature, union_one_entry_per_feature of antisense_calls.R; column orientations_called).
 
 file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)[1]
 script_dir <- dirname(normalizePath(sub("^--file=", "", file_arg)))
@@ -70,7 +72,8 @@ writeLines(c(
   paste0("DEG thresholds: |log2FC| >= ", lfc_threshold, ", padj < ", padj_threshold),
   paste0("pre-filter: >= ", min_count, " reads in >= ", min_samples, " samples"),
   paste0("antisense: separate fit with the sense size factors; calls kept if antisense > ", leak_fold,
-         "x expected leakage and no opposite-strand feature called in sense in the same direction")
+         "x expected leakage and no opposite-strand feature called in sense in the same direction"),
+  "DEG lists: one entry per feature; a feature called in both orientations is kept in the orientation with the larger change in mean normalized count"
 ), paste0(output_dir, "DESeq2_log.txt"))
 
 is_outlier <- function(x) {
@@ -305,18 +308,35 @@ down_TEs_intersect_filter <- function(res, TE_df, feature_df) {
 print("DEGs found in batch mode: export tables and heatmaps")
 all_res <- setNames(lapply(conditions, contrast_results), paste0("res_", conditions))
 
-DEGs <- list(
-  upTEs = unique(unlist(lapply(FUN = up_TEs_intersect_filter, X = all_res, TE_df = "TEs", feature_df = "features"))),
-  upfeatures = unique(unlist(lapply(FUN = up, X = all_res, annotations = "features"))),
-  downTEs = unique(unlist(lapply(FUN = down_TEs_intersect_filter, X = all_res, TE_df = "TEs", feature_df = "features"))),
-  downfeatures = unique(unlist(lapply(FUN = down, X = all_res, annotations = "features")))
+# calls of each comparison, then one entry per feature: a feature called in both orientations is kept in the orientation with the larger
+# change in mean normalized count (one_entry_per_feature, union_one_entry_per_feature: shared/pipelines/DESeq2/antisense_calls.R)
+call_types <- list(
+  up_TEs = list(fun = up_TEs_intersect_filter, args = list(TE_df = "TEs", feature_df = "features"), direction = "up"),
+  up_genes = list(fun = up, args = list(annotations = "features"), direction = "up"),
+  down_TEs = list(fun = down_TEs_intersect_filter, args = list(TE_df = "TEs", feature_df = "features"), direction = "down"),
+  down_genes = list(fun = down, args = list(annotations = "features"), direction = "down")
 )
+esf_mean <- as.matrix(tibble::column_to_rownames(as.data.frame(ESF_avg), "Geneid"))
+changes <- lapply(c(up = "up", down = "down"), function(d) {
+  setNames(lapply(conditions, orientation_change, norm_mean = esf_mean, ref = reference_condition, direction = d), conditions)
+})
+calls <- lapply(call_types, function(t) setNames(lapply(all_res, function(r) do.call(t$fun, c(list(r), t$args))), conditions))
+DEG_calls <- lapply(setNames(names(call_types), names(call_types)), function(n) {
+  lapply(setNames(conditions, conditions), function(c) one_entry_per_feature(calls[[n]][[c]], changes[[call_types[[n]]$direction]][[c]]))
+})
+batch_calls <- list(
+  upTEs = union_one_entry_per_feature(calls$up_TEs, changes$up),
+  upfeatures = union_one_entry_per_feature(calls$up_genes, changes$up),
+  downTEs = union_one_entry_per_feature(calls$down_TEs, changes$down),
+  downfeatures = union_one_entry_per_feature(calls$down_genes, changes$down)
+)
+DEGs <- lapply(batch_calls, `[[`, "Geneid")
 
 DEG_write_tables <- function(x, y) {
   dir <- paste0(output_dir, "batch_DEGs/", y)
   dir.create(dir, showWarnings = FALSE, recursive = TRUE)
   write_table <- function(data, suffix) {
-    df <- data %>% filter(Geneid %in% x) %>% left_join(Araport11_annotations, by = "Geneid")
+    df <- data %>% filter(Geneid %in% x) %>% left_join(batch_calls[[y]], by = "Geneid") %>% left_join(Araport11_annotations, by = "Geneid")
     write.table(df, file = paste0(dir, "/batch_", y, suffix), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
   }
   write_table(RPM_merged, "_RPM.tsv")
@@ -371,14 +391,9 @@ log2FC_df <- as_tibble(map_dfc(all_res, ~ as.data.frame(.x) %>% dplyr::select(lo
   dplyr::select(Geneid, everything())
 write.table(log2FC_df, file = file.path(norm_dir, "log2FC.tsv"), quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 
-DEG_nb <- t(data.frame(
-  up_TEs = unlist(lapply(FUN = length, X = lapply(FUN = up_TEs_intersect_filter, X = all_res, TE_df = "TEs", feature_df = "features"))),
-  up_features = unlist(lapply(FUN = length, X = lapply(FUN = up, X = all_res, annotations = "features"))),
-  down_TEs = unlist(lapply(FUN = length, X = lapply(FUN = down_TEs_intersect_filter, X = all_res, TE_df = "TEs", feature_df = "features"))),
-  down_features = unlist(lapply(FUN = length, X = lapply(FUN = down, X = all_res, annotations = "features")))
-)) %>%
+DEG_nb <- t(as.data.frame(lapply(setNames(DEG_calls, sub("genes", "features", names(DEG_calls))), function(x) sapply(x, nrow)))) %>%
   as.data.frame() %>%
-  setNames(gsub("res_", "", names(all_res))) %>%
+  setNames(conditions) %>%
   mutate(DEG = row.names(.))
 
 DEG_nb_long <- DEG_nb %>%
@@ -401,8 +416,9 @@ export_DEGs_pairwise <- function(x, name, DEG_list, DEG_type) {
   z <- as.data.frame(x) %>%
     mutate(Geneid = rownames(x)) %>%
     dplyr::select(Geneid, everything()) %>%
-    filter(Geneid %in% DEG_list) %>%
+    inner_join(DEG_list, by = "Geneid") %>%
     left_join(Araport11_annotations, by = "Geneid")
+  DEG_list <- DEG_list$Geneid
   export_table <- function(data, suffix, directory) {
     write.table(data, file = file.path(directory, paste0(name, "_vs_", reference_condition, "_", DEG_type, suffix)),
                 quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
@@ -426,15 +442,8 @@ export_DEGs_pairwise <- function(x, name, DEG_list, DEG_type) {
   generate_heatmap(rld, "_rlog_all_replicates_heatmap.pdf", "rlog", rep_dir)
 }
 
-comparison_names <- gsub("res_", "", names(all_res))
-for (type in list(list("up_TEs", up_TEs_intersect_filter, "TEs"), list("down_TEs", down_TEs_intersect_filter, "TEs"),
-                  list("up_genes", up, "features"), list("down_genes", down, "features"))) {
-  DEG_lists <- if (type[[3]] == "TEs") {
-    lapply(FUN = type[[2]], X = all_res, TE_df = "TEs", feature_df = "features")
-  } else {
-    lapply(FUN = type[[2]], X = all_res, annotations = "features")
-  }
-  invisible(mapply(FUN = export_DEGs_pairwise, x = all_res, name = comparison_names, DEG_list = DEG_lists, MoreArgs = list(DEG_type = type[[1]])))
+for (n in names(DEG_calls)) {
+  invisible(mapply(FUN = export_DEGs_pairwise, x = all_res, name = conditions, DEG_list = DEG_calls[[n]], MoreArgs = list(DEG_type = n)))
 }
 
 # environment for downstream analyses ####
