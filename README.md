@@ -303,8 +303,20 @@ The full table of each comparison keeps every feature, with the two values the r
 expected leakage; `Inf` when no leakage is expected, `NA` without antisense count) and `opposite_strand_sense_DEG` (the partners called in sense).
 DEG tables, heatmaps and batch lists hold only the kept calls. The TE overlap filter above applies on top.
 
-Sense calls do not depend on the antisense rules. Counting a TE up in both orientations once (e.g. "sense wins" for TE lists) is an
-analysis choice, not a pipeline rule.
+Sense calls do not depend on the antisense rules. Kept antisense calls are differential loci in their own right: lists of up or down features
+include them.
+
+**A feature counts once ("sense wins").** The pipeline's DEG tables and batch lists keep the two orientations as separate entries (`<ID>` and
+`<ID>_AS`). Any list, count or overlap built from them, in either pipeline (TEs or genes), resolves a feature called in both orientations to
+one entry, in the scope of the question:
+
+- **Per condition** (set membership, overlaps between conditions: "is this feature up in X"): within each comparison, a feature called in both
+  orientations is one sense entry. Other comparisons are unaffected.
+- **Across conditions** (union lists, one row per feature in a heatmap or table): a feature called in sense in any comparison is a sense entry,
+  and its antisense-only calls in the other comparisons are dropped; a comparison counts as called for that feature only in the orientation the
+  list keeps. A feature called only in antisense, in every comparison where it is called, is an antisense entry.
+
+Both scopes apply within one direction (an up list, or a down list).
 
 **Why.** Benchmark (two TEG runs of this pipeline, two RNA-seq datasets of the shared DESeq2 pipeline) and simulation with known truth:
 `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md` (tool:
