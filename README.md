@@ -323,7 +323,8 @@ count: condition minus reference for an up call, reference minus condition for a
 The change, not the level, decides: a constantly expressed transcript on the opposite strand adds the same reads in both groups, so it can raise
 the antisense level of a feature but not its change. At TEs called up in both orientations in two tag-seq datasets, antisense is the larger
 change in about half of them, and the opposite-strand features whose expression matches the antisense signal are themselves induced in the
-mutant (TE transcripts annotated as separate genes): `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/te_call_lists/RESULTS.md`.
+mutant (TE transcripts annotated as separate genes):
+`projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md`, last section.
 
 **Why.** Benchmark (two TEG runs of this pipeline, two RNA-seq datasets of the shared DESeq2 pipeline) and simulation with known truth:
 `projects/00_collaborations/2023_ddm1_alleles/04_results/genomics/postprocessing/rnaseq/antisense_deseq2_benchmark/RESULTS.md` (tool:
