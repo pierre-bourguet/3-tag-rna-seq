@@ -63,7 +63,8 @@ process QC_PLOTS {
 process MULTIQC {
     cpus 2
     memory '8 GB'
-    time '1h'
+    // ~1 min per library (9 QC files each); doubled on each retry
+    time { (20.min + 1.min * [files].flatten().size().intdiv(9)) * task.attempt }
     publishDir "${params.outdir}/05_multiqc", mode: 'copy'
 
     input:
