@@ -47,23 +47,24 @@ AtRTD3 TE genes (TEGs), chosen with `--te_annotation`.
 
 ## Quick start
 
-On the CLIP cluster (`-profile cbe`: SLURM + environment modules). Run Nextflow from an interactive session or a
-small sbatch job and point `-w` to scratch:
+On CBE.next (`-profile cbenext`: Slurm, the tool versions of the earlier `cbe` profile from Galaxy BioContainers images, conda for the two
+processes that need two tools, modules for Python, R and pigz; `conf/cbenext.config`). The `cbe` profile is the legacy CBE cluster's.
+Run Nextflow from a small sbatch job and point `-w` to scratch:
 
 ```bash
-ml nextflow/24.10.6
+module load Nextflow/25.04.6
 pipeline=/groups/berger/user/pierre.bourguet/shared/pipelines/3-tag-rna-seq
 
-# 1. once per reference (ATTE, TEG and ATTE + mTurq are built on CLIP: resources/genomes/a_thaliana/AtRTD3/create_tagseq_references.sh)
-nextflow run $pipeline/main.nf -profile cbe --build_reference --te_annotation ATTE -w $SCRATCHDIR/nf_work_ref
+# 1. once per reference (ATTE, TEG and ATTE + mTurq are built: resources/genomes/a_thaliana/AtRTD3/create_tagseq_references.sh)
+nextflow run $pipeline/main.nf -profile cbenext --build_reference --te_annotation ATTE -w $SCRATCHDIR/nf_work_ref
 
 # 2a. demultiplex + map
-nextflow run $pipeline/main.nf -profile cbe --steps demultiplex,map \
+nextflow run $pipeline/main.nf -profile cbenext --steps demultiplex,map \
     --fastq_r1 pool_R1.fastq.gz --fastq_r2 pool_R2.fastq.gz --well_sheet wells.csv \
     --outdir results/tagseq_08 -w $SCRATCHDIR/nf_work_tagseq_08
 
 # 2b. or map an existing samplesheet
-nextflow run $pipeline/main.nf -profile cbe --samplesheet samplesheet.csv --outdir results/tagseq_08 \
+nextflow run $pipeline/main.nf -profile cbenext --samplesheet samplesheet.csv --outdir results/tagseq_08 \
     -w $SCRATCHDIR/nf_work_tagseq_08 -resume
 
 # 3. differential expression
@@ -71,10 +72,10 @@ sbatch $pipeline/deseq2/run_deseq2.sbatch results/tagseq_08/02_counts none none 
     results/tagseq_08/00_demultiplex/samplesheet.csv WT
 
 # small end-to-end test (2 samples x 10,000 reads)
-nextflow run $pipeline/main.nf -profile cbe,test
+nextflow run $pipeline/main.nf -profile cbenext,test
 ```
 
-Outside CLIP, drop `-profile cbe` and have the tools on `PATH`: fastp, BBMap (clumpify), seqtk, FastQC, STAR, salmon,
+Elsewhere, drop the profile and have the tools on `PATH`: fastp, BBMap (clumpify), seqtk, FastQC, STAR, salmon,
 samtools, UCSC `bedGraphToBigWig`/`bigWigMerge` (`--ucsc_tools <dir>`), deepTools, MultiQC, Python 3, R with tidyverse
 and ggbeeswarm. The reference build also needs gffread, bedtools and singularity for AGAT. Pass your own reference
 with `--reference_dir`.

@@ -6,7 +6,7 @@ def resolve_reference_dir() {
     def manifest = file("${dir}/reference_manifest.tsv")
     if (!manifest.exists()) {
         error "No reference_manifest.tsv in ${dir}. Build it first: nextflow run main.nf --build_reference --te_annotation ${params.te_annotation}" +
-              (params.transgene ? " --transgene ${params.transgene}" : '') + " -profile cbe"
+              (params.transgene ? " --transgene ${params.transgene}" : '') + " -profile cbenext"
     }
     return dir
 }
