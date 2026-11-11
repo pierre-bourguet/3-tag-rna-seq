@@ -17,7 +17,7 @@ deseq2_dir=/groups/berger/user/pierre.bourguet/shared/pipelines/3-tag-rna-seq/de
 echo -e "$(date) . . . Starting . . ."
 echo -e "count directory: $1\noutliers: $2\noutlier patterns: $3\nsample sheet: $4\nreference condition: $5\noptions: ${*:6}\n"
 
-ml build-env/f2022 r-bundle-bioconductor/3.18-foss-2023a-r-4.3.2
+ml R-bundle-Bioconductor/3.20-foss-2024a-R-4.4.2
 
 Rscript "${deseq2_dir}/DESeq2_tagseq.R" "$@"
 
