@@ -31,12 +31,13 @@ process STAR_ALIGN {
     """
 }
 
-// Sense (-l SF) and antisense (-l SR) counts, all reads and unique mappers (MAPQ 255) only
+// Sense (-l SF) and antisense (-l SR) counts, all reads and unique mappers (MAPQ 255) only.
+// One thread: the assignment of multi-mapping reads varies between runs about 6x less than with 8 threads (README, "Reproducibility and legacy runs").
 process SALMON_QUANT_ALIGNED {
     tag "${meta.id}"
-    cpus 8
-    memory { 24.GB + 24.GB * task.attempt }
-    time '2h'
+    cpus 1
+    memory { 8.GB * task.attempt }
+    time { 4.h * task.attempt }
     errorStrategy 'retry'
     publishDir "${params.outdir}/02_counts/samples/${meta.id}", mode: 'copy'
 
@@ -50,12 +51,12 @@ process SALMON_QUANT_ALIGNED {
     script:
     def id = meta.id
     """
-    salmon quant -p ${task.cpus} -l SF -t ${transcripts} -a ${bam} -o STAR_mapping_salmon_quant_${id} --noLengthCorrection
-    salmon quant -p ${task.cpus} -l SR -t ${transcripts} -a ${bam} -o STAR_mapping_salmon_quant_${id}_AS --noLengthCorrection
+    salmon quant -p 1 -l SF -t ${transcripts} -a ${bam} -o STAR_mapping_salmon_quant_${id} --noLengthCorrection
+    salmon quant -p 1 -l SR -t ${transcripts} -a ${bam} -o STAR_mapping_salmon_quant_${id}_AS --noLengthCorrection
 
     samtools view --bam -q 255 ${bam} > unique_${bam}
-    salmon quant -p ${task.cpus} -l SF -t ${transcripts} -a unique_${bam} -o unique_STAR_mapping_salmon_quant_${id} --noLengthCorrection
-    salmon quant -p ${task.cpus} -l SR -t ${transcripts} -a unique_${bam} -o unique_STAR_mapping_salmon_quant_${id}_AS --noLengthCorrection
+    salmon quant -p 1 -l SF -t ${transcripts} -a unique_${bam} -o unique_STAR_mapping_salmon_quant_${id} --noLengthCorrection
+    salmon quant -p 1 -l SR -t ${transcripts} -a unique_${bam} -o unique_STAR_mapping_salmon_quant_${id}_AS --noLengthCorrection
     rm unique_${bam}
     """
 }

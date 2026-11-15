@@ -399,17 +399,23 @@ mutant (TE transcripts annotated as separate genes):
     reads (next point);
   - DESeq2 vs WT (default sample set of the project, 6 comparisons): r(-log10 padj) >= 0.9993 in each comparison, 98.0–99.5% of the up
     TEs of each comparison shared; union up-TE list 1,267 (legacy) and 1,269 TEs, 1,255 shared.
-- **Counts of multi-mapping reads change from run to run.** salmon (alignment mode, 8 threads) splits reads that map to several
-  transcripts differently at each run: two runs on the same BAM (tag-seq06 WT_R3) differ for 5,616 of 195,890 transcripts, with identical
-  totals. `star_counts*` and `salmon_counts*` therefore change slightly when a run is repeated, and calls close to the DESeq2 thresholds can
-  flip: about 1% of the DEG lists differ between two runs of the same data (tag-seq06 above). Unique-mapper counts are reproduced exactly.
-  salmon has no seed option, and `-p 1` does not remove the variation: two single-thread runs on the same BAM still differ for 972
-  transcripts (mostly reads moved between isoforms of one gene), at 4-7x the run time.
+- **Counts of multi-mapping reads change from run to run.** salmon (alignment mode) splits reads that map to several transcripts
+  differently at each run, with identical totals, and has no seed option. `SALMON_QUANT_ALIGNED` runs it with one thread, which reduces the
+  variation without removing it: two runs on the same BAM (tag-seq06 WT_R3) differ for 972 of 195,890 transcripts with `-p 1` and 5,616
+  with `-p 8` (16 and 133 of 68,157 genes by >= 1 read after summing isoforms), and `-p 1` takes 4-7x longer. Unique-mapper counts are
+  reproduced exactly. `star_counts*` therefore change slightly when a run is repeated, and so do `salmon_counts*` (`SALMON_QUANT_PSEUDO`,
+  8 threads); calls close to the DESeq2 thresholds can flip: with 8 threads, about 1% of the DEG lists differ between two runs of the same
+  data (tag-seq06 above), not measured with one thread. The largest changes, and so the least reliable counts, are on:
+  - chloroplast transcripts, the polycistronic ones (`ATCG00930-ATCG00940-...` IDs) and single-gene ones (e.g. ATCG01180.1): up to
+    ~6,000 reads at counts of 10^4 to 10^6;
+  - isoforms of one gene, between which salmon can move all the shared reads (AT2G21240.4 / .5: 486 reads on one or the other). Count
+    tables and DESeq2 are per transcript, so such isoforms can swap DEG calls between runs; sum them when the question is the gene.
 - **Behavior changes since `legacy-v1`:**
   - Downsampling uses `seqtk sample -2` instead of an in-memory awk reservoir. Samples below `--max_n_read` are
     unaffected (the legacy code kept all their reads but shuffled their order). Samples above it get a different random
     subset.
   - Unique-mapper counts are produced for every run.
+  - salmon on the STAR transcriptome BAM runs with one thread (`legacy-v1`: 8), which reduces the run-to-run variation (see above).
   - Transgene rows are replaced by unique-mapper counts by ID, not by position.
   - `pipeline_statistics.tsv` columns are sorted by sample name, the same order as the count tables.
   - Transcript sequences are sorted by ID when the reference is built. AGAT writes them in an order that varies between
