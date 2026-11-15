@@ -390,6 +390,20 @@ mutant (TE transcripts annotated as separate genes):
     - DESeq2 with the legacy arguments: 1015 up / 1301 down features and 1283 up / 22 down TEs
       (legacy: 997 / 1301 and 1276 / 21); 93–97% of the DEGs of each comparison are shared, and most of the others
       have padj < 0.2 and |log2FC| > 0.8 in both runs.
+- **Same code on CBE.next (`-profile cbenext`) vs the legacy cluster (`-profile cbe`):** full rerun of tag-seq06 (36 samples,
+  `--steps demultiplex,map --te_annotation ATTE`, no downsampling) from the raw pool, compared with run `2026-10-09_tagseq_06_ATTE` of
+  2023_ddm1_alleles:
+  - reads per well, every value of `pipeline_statistics.tsv`, `unique_star_counts{,_AS}.tsv` and the total counts per sample of every
+    table: identical;
+  - 2.7% of the values of `star_counts.tsv` differ (`star_counts_AS.tsv` 1.9%, `salmon_counts{,_AS}.tsv` 0.2%), all from multi-mapping
+    reads (next point);
+  - DESeq2 vs WT (default sample set of the project, 6 comparisons): r(-log10 padj) >= 0.9993 in each comparison, 98.0–99.5% of the up
+    TEs of each comparison shared; union up-TE list 1,267 (legacy) and 1,269 TEs, 1,255 shared.
+- **Counts of multi-mapping reads change from run to run.** salmon (alignment mode, 8 threads) splits reads that map to several
+  transcripts differently at each run: two runs on the same BAM (tag-seq06 WT_R3) differ for 5,616 of 195,890 transcripts, with identical
+  totals. `star_counts*` and `salmon_counts*` therefore change slightly when a run is repeated, and calls close to the DESeq2 thresholds can
+  flip: about 1% of the DEG lists differ between two runs of the same data (tag-seq06 above). Unique-mapper counts are reproduced exactly.
+  Whether `salmon quant -p 1` is deterministic is not tested.
 - **Behavior changes since `legacy-v1`:**
   - Downsampling uses `seqtk sample -2` instead of an in-memory awk reservoir. Samples below `--max_n_read` are
     unaffected (the legacy code kept all their reads but shuffled their order). Samples above it get a different random
