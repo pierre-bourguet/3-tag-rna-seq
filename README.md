@@ -403,7 +403,8 @@ mutant (TE transcripts annotated as separate genes):
   transcripts differently at each run: two runs on the same BAM (tag-seq06 WT_R3) differ for 5,616 of 195,890 transcripts, with identical
   totals. `star_counts*` and `salmon_counts*` therefore change slightly when a run is repeated, and calls close to the DESeq2 thresholds can
   flip: about 1% of the DEG lists differ between two runs of the same data (tag-seq06 above). Unique-mapper counts are reproduced exactly.
-  Whether `salmon quant -p 1` is deterministic is not tested.
+  salmon has no seed option, and `-p 1` does not remove the variation: two single-thread runs on the same BAM still differ for 972
+  transcripts (mostly reads moved between isoforms of one gene), at 4-7x the run time.
 - **Behavior changes since `legacy-v1`:**
   - Downsampling uses `seqtk sample -2` instead of an in-memory awk reservoir. Samples below `--max_n_read` are
     unaffected (the legacy code kept all their reads but shuffled their order). Samples above it get a different random
