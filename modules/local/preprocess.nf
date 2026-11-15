@@ -46,10 +46,12 @@ process UMI_DEDUP {
 
     script:
     def id = meta.id
+    // Java heap set from the task memory (clumpify.sh otherwise sizes it from the memory of the whole node)
+    def xmx = (task.memory.toMega() * 0.8) as long
     """
     awk 'BEGIN {UMI = ""; q="IIIIIIII"} {r_n = (NR%4); if(r_n == 1) {UMI = substr(\$1,length(\$1)-7,length(\$1)); print;}; if(r_n==2) {printf "%s%s%s%s\\n", UMI, UMI, UMI, \$1}; if(r_n==3) {print}; if(r_n==0) {printf "%s%s%s%s\\n", q,q,q,\$1}}' ${fastq} > ${id}_triple_umi_in_R1.fastq
 
-    clumpify.sh in=${id}_triple_umi_in_R1.fastq out=${id}_umi_dedup.fastq dedupe addcount tossjunk 2> ${id}_umi_dedup.log
+    clumpify.sh -Xmx${xmx}m in=${id}_triple_umi_in_R1.fastq out=${id}_umi_dedup.fastq dedupe addcount tossjunk 2> ${id}_umi_dedup.log
     rm ${id}_triple_umi_in_R1.fastq
 
     # distribution of copies per collapsed read
